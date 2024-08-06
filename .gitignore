@@ -1,0 +1,9 @@
+database/
+
+__pycache__/
+
+EEGformer/
+
+Mental_Imagery/
+
+split/
