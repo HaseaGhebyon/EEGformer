@@ -26,7 +26,7 @@ def get_config():
 
 def get_weights_file_path(config, epoch: str):
     model_folder = f"{config['datasource']}_{config['model_folder']}"
-    model_filename = f"{config['model_basename']}_{epoch}.pth"
+    model_filename = f"{config['model_basename']}_{epoch}"
     return str(Path('.') / model_folder / model_filename)
 
 def latest_weights_file_path(config):
