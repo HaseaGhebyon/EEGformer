@@ -50,7 +50,7 @@ def dcsm(actuals, predictions):
         recall += temp_rec
     precision = precision/5
     recall = recall/5
-    print(f"\nAcc : {accuracy} \t Prec : {precision} \t Recall : {recall}")
+    print(f"Acc : {accuracy} \t Prec : {precision} \t Recall : {recall}\n")
     return accuracy, precision, recall
 
 def run_validation(model, validation_loader, device, global_step, writer):
