@@ -6,12 +6,13 @@ def get_config():
         "num_epoch" : 200,
         "learning_rate" : 1e-05,
         "epsilon" : 1e-9,
-        "datasource" : "/content/drive/Shareddrives/Tugas Akhir/3chan_bpf_377dp",
+        "datasource" : "/content/drive/Shareddrives/Tugas Akhir/3chan_377dp",
         "model_folder" : "weights",
         "model_basename" : "eegformer_model",
         "preload" : "latest",
         "num_cls" : 5,
         "experiment_name": "runs/eegformermodel",
+        "transformer_size" : 1,
         
         # DATASET CONFIGURATION 
         "ds_dir" : "E:Ghebyon's/Dataset/Motor Imagery",

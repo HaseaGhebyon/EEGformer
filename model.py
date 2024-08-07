@@ -3,6 +3,7 @@ import torch.nn as nn
 import math
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print("Device :", device)
 
 class OneDCNN(nn.Module):
     def __init__(self, in_chan, feature, dtype=torch.float32):
@@ -294,8 +295,13 @@ class EEGformerEncoder(nn.Module):
         return x
 
 class EEGformerDecoder(nn.Module):
-    def __init__(self, features_s: int, features_c: int, features_m: int, hidden_features: int, num_cls: int) -> None:
+    def __init__(self, features_s: int, features_c: int, features_m: int, hidden_features: int, num_cls: int, patch_regional:int, patch_sync:int) -> None:
         super().__init__()
+        self.patch_regional = patch_regional
+        self.patch_sync = patch_sync
+        self.num_cls = num_cls
+        self.hidden_features = hidden_features
+        
         self.conv_1 = nn.Conv1d(features_c, 1, kernel_size=1)
         self.conv_2 = nn.Conv1d(features_s, hidden_features, kernel_size=1)
         self.conv_3 = nn.Conv1d(features_m, int(features_m/2), kernel_size=1)
@@ -304,10 +310,10 @@ class EEGformerDecoder(nn.Module):
     def forward(self, x):
         # print("INSIDE DECODER")
 
-        x = x.reshape(x.shape[0], x.shape[1], 4, 121) # 8,11,4,121
+        x = x.reshape(x.shape[0], x.shape[1], self.patch_sync, self.patch_regional) # 8,11,4,121
         init_shape = x.shape
-
-        x = x.reshape(init_shape[0] * init_shape[1], 4, 121).transpose(1,2) # 88, 4,121
+        # print("Init : ", init_shape)
+        x = x.reshape(init_shape[0] * init_shape[1], self.patch_sync, self.patch_regional).transpose(1,2) # 88, 4,121
         # print(x.shape)
         x = self.conv_1(x)
 
@@ -321,9 +327,9 @@ class EEGformerDecoder(nn.Module):
         # print(x.shape)
         x = self.conv_3(x)
 
-        x = x.reshape(init_shape[0], 2, 5, 1)
-        x = x.reshape(init_shape[0], 2 * 5, 1)
-        x = x.reshape(init_shape[0], 10)
+        x = x.reshape(init_shape[0], self.hidden_features, self.num_cls, 1)
+        x = x.reshape(init_shape[0], self.hidden_features * self.num_cls, 1)
+        x = x.reshape(init_shape[0], self.hidden_features * self.num_cls)
         # print(x.shape)
         x = self.proj(x)
         # print(x.shape)
@@ -370,7 +376,7 @@ def build_eegformer(
     assert conv_temporal % sub_matrices == 0, "Temporal Sequence (conv_temporal) is not divisible by Sub Matrices (sub_matrices).\nCheck length of EEG sequence after processed by OneDCNN"
 
     patch_regional = feature_onedcnn + 1
-    patch_sync = channel_size + 1
+    patch_sync =  channel_size + 1
     patch_temporal = sub_matrices + 1
 
     map_f_channel = patch_regional * patch_sync
@@ -404,6 +410,6 @@ def build_eegformer(
     temp_encoder = TemporalEncoder(map_f_channel, nn.ModuleList(temp_encoder_blocks))
     
     eegformer_encoder = EEGformerEncoder(regional_encoder, sync_encoder, temp_encoder, conv_temporal, patch_regional, patch_sync, sub_matrices)
-    eegformer_decoder = EEGformerDecoder(patch_sync, patch_regional, patch_temporal, 2, num_cls)
+    eegformer_decoder = EEGformerDecoder(patch_sync, patch_regional, patch_temporal, feature_decoder, num_cls, patch_regional, patch_sync)
     eegformer = EEGformer(onedcnn, eegformer_encoder, eegformer_decoder)
     return eegformer

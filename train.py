@@ -94,9 +94,9 @@ def get_dataset(config):
                        ]),
                        num_worker=1,
                        num_samples_per_worker=50)
-
-    train_dataset, val_dataset = model_selection.train_test_split(dataset=dataset, test_size=0.3, random_state=7)
-    train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
+    
+    train_dataset, val_dataset = model_selection.train_test_split(dataset=dataset, test_size=0.2, random_state=7, )
+    train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True)
 
     return train_dataloader, val_dataloader
@@ -105,7 +105,8 @@ def get_model(config):
     return build_eegformer(
         len(config["selected_channel"]),
         config["seq_len"],
-        num_cls = config["num_cls"]
+        num_cls = config["num_cls"],
+        N=config["transformer_size"]
     )
 
 def train_model(config):
@@ -169,7 +170,7 @@ def train_model(config):
 
             global_step += 1
         
-        run_validation(model, val_dataloader, device, global_step)
+        run_validation(model, val_dataloader, device, global_step,writer)
         
         model_filename = get_weights_file_path(config, f"{epoch:02d}")
         torch.save({
