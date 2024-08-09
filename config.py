@@ -6,7 +6,7 @@ def get_config():
         "num_epoch" : 200,
         "learning_rate" : 1e-05,
         "epsilon" : 1e-9,
-        "datasource" : "/content/drive/Shareddrives/Tugas Akhir/3chan_377dp",
+        "datasource" : "./database/3chan_277dp",
         "model_folder" : "weights",
         "model_basename" : "eegformer_model",
         "preload" : "latest",
@@ -16,7 +16,7 @@ def get_config():
         
         # DATASET CONFIGURATION 
         "ds_dir" : "E:Ghebyon's/Dataset/Motor Imagery",
-        "seq_len" : 377,
+        "seq_len" : 277,
         "channel_order" : ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],
         "selected_channel" : ['C3', 'C4', 'Cz'],
         "low_cut" : 0.57, #Hz
