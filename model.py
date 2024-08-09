@@ -15,12 +15,19 @@ class OneDCNN(nn.Module):
         self.conv1 = nn.Conv1d(self.in_chan, self.in_chan, kernel_size=10, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
         self.conv2 = nn.Conv1d(self.in_chan, self.in_chan, kernel_size=10, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
         self.conv3 = nn.Conv1d(self.in_chan, self.feature * self.in_chan, kernel_size=10, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
+        self.gelu = nn.GELU()
 
     def forward(self, x):
         # (Batch, Channel, Seq_Len)
         x = self.conv1(x)
+        x = self.gelu(x)
+
         x = self.conv2(x)
+        x = self.gelu(x)
+
         x = self.conv3(x)
+        x = self.gelu(x)
+
         x = torch.reshape(x, (x.shape[0], (int)(x.shape[1]/self.feature), self.feature, (int)(x.shape[2])))
         return x
 
@@ -216,9 +223,9 @@ class TemporalEncoder(nn.Module):
 
 class EEGformerEncoder(nn.Module):
     def __init__(
-        self, 
-        regional_encoder: RegionalEncoder, 
-        sync_encoder: SyncEncoder, 
+        self,
+        regional_encoder: RegionalEncoder,
+        sync_encoder: SyncEncoder,
         temporal_encoder: TemporalEncoder,
         onedcnn_seq: int,
         patch_region: int,
@@ -228,7 +235,7 @@ class EEGformerEncoder(nn.Module):
         super().__init__()
         self.onedcnn_seq = onedcnn_seq
         self.submetric_temporal = submetric_temporal
-        
+
         self.patch_region = patch_region
         self.patch_sync = patch_sync
         self.patch_temporal = submetric_temporal + 1
@@ -301,7 +308,7 @@ class EEGformerDecoder(nn.Module):
         self.patch_sync = patch_sync
         self.num_cls = num_cls
         self.hidden_features = hidden_features
-        
+
         self.conv_1 = nn.Conv1d(features_c, 1, kernel_size=1)
         self.conv_2 = nn.Conv1d(features_s, hidden_features, kernel_size=1)
         self.conv_3 = nn.Conv1d(features_m, int(features_m/2), kernel_size=1)
@@ -357,20 +364,20 @@ class EEGformer(nn.Module):
 
 
 def build_eegformer(
-        channel_size: int, 
-        seq_len: int, 
-        N: int = 3, 
+        channel_size: int,
+        seq_len: int,
+        N: int = 3,
         feature_onedcnn: int=120,
         kernel_size: int=10,
-        h_regional: int=5, 
-        h_sync: int=5, 
-        h_temp: int=11, 
+        h_regional: int=5,
+        h_sync: int=5,
+        h_temp: int=11,
         dropout:float = 0.1,
-        sub_matrices:int = 10, 
+        sub_matrices:int = 10,
         feature_decoder:int = 2,
         num_cls: int=5,
         scaler_ffn: int=4):
-    
+
     # Calculate some feature size
     conv_temporal = seq_len - 3 * (kernel_size - 1) # 350 = 377 - 27
     assert conv_temporal % sub_matrices == 0, "Temporal Sequence (conv_temporal) is not divisible by Sub Matrices (sub_matrices).\nCheck length of EEG sequence after processed by OneDCNN"
@@ -383,7 +390,7 @@ def build_eegformer(
 
     onedcnn = OneDCNN(channel_size, feature_onedcnn)
     # Output Shape OneDCNN without Batch
-    
+
     regional_encoder_blocks = []
     for _ in range(N):
         encoder_self_attention_block  = MultiHeadAttentionBlock(conv_temporal, h_regional, dropout)
@@ -408,7 +415,7 @@ def build_eegformer(
     regional_encoder = RegionalEncoder(conv_temporal, nn.ModuleList(regional_encoder_blocks))
     sync_encoder = SyncEncoder(conv_temporal, nn.ModuleList(sync_encoder_blocks))
     temp_encoder = TemporalEncoder(map_f_channel, nn.ModuleList(temp_encoder_blocks))
-    
+
     eegformer_encoder = EEGformerEncoder(regional_encoder, sync_encoder, temp_encoder, conv_temporal, patch_regional, patch_sync, sub_matrices)
     eegformer_decoder = EEGformerDecoder(patch_sync, patch_regional, patch_temporal, feature_decoder, num_cls, patch_regional, patch_sync)
     eegformer = EEGformer(onedcnn, eegformer_encoder, eegformer_decoder)
