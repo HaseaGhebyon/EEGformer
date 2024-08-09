@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from tqdm import tqdm
+import pywt
 
 import scipy.io
 from scipy.signal import butter, lfilter
@@ -51,6 +52,16 @@ def getData(config, marker, data, sampling_freq=200):
     list_idx = []
     label = []
     temp = []
+
+    # print("Data : \n", data)
+    # Apply FFT
+    # fft_data = np.abs(np.fft.fft(data, axis=1))
+    # print("FFT : \n",fft_data)
+    # Normalize the FFT data by channel
+    # normalized_data = (fft_data - np.mean(fft_data, axis=1, keepdims=True)) / np.std(fft_data, axis=1, keepdims=True)
+    # print("Normalized : \n",normalized_data)
+
+
     for idx, event_id in enumerate(marker):      
         event_id = int(event_id[0])
         if (prev in [1,2,4,5,6]):
@@ -177,7 +188,7 @@ def generate_dataset(config):
     y_res_lab_change
 
 
-    X_train_dataset, X_eval_dataset, y_train_dataset, y_eval_dataset = model_selection.train_test_split(X_res_band_filt, y_res_lab_change, test_size=0.3, stratify=y_res)
+    X_train_dataset, X_eval_dataset, y_train_dataset, y_eval_dataset = model_selection.train_test_split(X_res_band_filt, y_res_lab_change, test_size=0.2, stratify=y_res)
 
     
     X_new = np.concatenate((X_train_dataset, X_eval_dataset))
@@ -191,17 +202,16 @@ if __name__ == '__main__':
     from config import get_config, get_database_name
     config = get_config()
     X, y = generate_dataset(config)
+
     output_name = get_database_name(config, "")
 
     database = NumpyDataset(X=X,
                         y=y,
                         io_path=f"./database/{output_name}",
-                        # offline_transform=transforms.Compose([
-                        #         transforms.MeanStdNormalize(axis=0)
-                        # ]),
                         online_transform=transforms.ToTensor(),
                         label_transform=transforms.Compose([
                             transforms.Select('label')
                         ]),
                         num_worker=1,
                         num_samples_per_worker=50)
+    print(database[0])
