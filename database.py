@@ -1,7 +1,6 @@
 import os
 import numpy as np
 from tqdm import tqdm
-import pywt
 
 import scipy.io
 from scipy.signal import butter, lfilter
