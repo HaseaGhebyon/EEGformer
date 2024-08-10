@@ -271,4 +271,9 @@ def build_eegformer(
 
     
     eegformer = EEGformer(positional_encoding, encoder, vector_quantizer, decoder, projector)
+    
+    for p in eegformer.parameters():
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)  
+    
     return eegformer
