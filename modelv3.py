@@ -20,14 +20,15 @@ class LayerNormalization(nn.Module):
         return self.alpha * (x - mean) / (std + self.eps) + self.bias
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, dropout: float, max_len: int=5000) -> None:
+    def __init__(self, d_model: int, seq_len: int, dropout: float) -> None:
         super().__init__()
         self.d_model = d_model
+        self.seq_len = seq_len
         self.dropout = nn.Dropout(dropout)
 
-        pe = torch.zeros(max_len, d_model)
+        pe = torch.zeros(seq_len, d_model)
 
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
 
         div_term_even = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         if (d_model % 2 != 0):
@@ -43,7 +44,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + (self.pe[:, :x.shape[1], :]) # (batch, seq_len, d_model)
+        x = x + (self.pe[:, :x.shape[2], :]).requires_grad_(False) # (batch, seq_len, d_model)
         return self.dropout(x)
 
 class ResidualConnection(nn.Module):
@@ -123,6 +124,7 @@ class EncoderBlock(nn.Module):
 class EEGformerEncoder(nn.Module):
     def __init__(self, features:int, layers: nn.ModuleList) -> None:
         super().__init__()
+        self.linear = nn.Linear(features, features, bias=True)
         self.layers = layers
         self.norm = LayerNormalization(features)
 
@@ -133,7 +135,7 @@ class EEGformerEncoder(nn.Module):
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
-        super(VectorQuantizer, self).__init__()
+        super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
         self.commitment_cost = commitment_cost
@@ -141,21 +143,22 @@ class VectorQuantizer(nn.Module):
         self.embedding.weight.data.uniform_(-1/self.num_embeddings, 1/self.num_embeddings)
 
     def forward(self, inputs):
-        flat_input = inputs.view(-1, self.embedding_dim)
-        distances = (torch.sum(flat_input**2, dim=1, keepdim=True) 
+        flat_input = inputs.view(inputs.shape[0],-1, self.embedding_dim)
+
+        distance = (torch.sum(flat_input**2, dim=2, keepdim=True)
                     + torch.sum(self.embedding.weight**2, dim=1)
                     - 2 * torch.matmul(flat_input, self.embedding.weight.t()))
 
-        encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
-        encodings = torch.zeros(encoding_indices.shape[0], self.num_embeddings, device=inputs.device)
-        encodings.scatter_(1, encoding_indices, 1)
+        encoding_indices = torch.argmin(distance, dim=2).unsqueeze(2)
+        encodings = torch.zeros(flat_input.shape[0], encoding_indices.shape[1], self.num_embeddings, device=inputs.device)
+        encodings.scatter(2, encoding_indices, 1)
 
         quantized = torch.matmul(encodings, self.embedding.weight).view(inputs.shape)
         e_latent_loss = F.mse_loss(quantized.detach(), inputs)
         q_latent_loss = F.mse_loss(quantized, inputs.detach())
         loss = q_latent_loss + self.commitment_cost * e_latent_loss
 
-        quantized = inputs + (quantized - inputs).detach()
+        quantized = inputs + (quantized-inputs).detach()
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
         return quantized, loss, perplexity
@@ -186,15 +189,19 @@ class EEGformerDecoder(nn.Module):
             x = layer(x, encoder_output, src_mask, tgt_mask)
         return self.norm(x)
 
-
 class ProjectionLayer(nn.Module):
-
-    def __init__(self, d_model, input_size) -> None:
+    def __init__(self, input_dim, d_model, num_cls) -> None:
         super().__init__()
-        self.proj = nn.Linear(d_model, input_size)
+        self.flatten = nn.Flatten(start_dim=1)  # Meratakan dimensi (dim1, dim2) menjadi satu dimensi
+        self.linear1 = nn.Linear(input_dim * d_model, input_dim * d_model *4)  # Proyeksi pertama
+        self.linear2 = nn.Linear(input_dim * d_model*4, num_cls)  # Proyeksi kedua
 
+      
     def forward(self, x):
-        return self.proj(x)
+        x = self.flatten(x)  
+        x = self.linear1(x)  
+        x = self.linear2(x)  
+        return torch.softmax(x, dim=1)
 
 class EEGformer(nn.Module):
     def __init__(self,
@@ -202,7 +209,7 @@ class EEGformer(nn.Module):
                  encoder: EEGformerEncoder,
                  vec_quantizer: VectorQuantizer,
                  decoder: EEGformerDecoder,
-                 projector: ProjectionLayer,
+                 projector: ProjectionLayer
                  ) -> None:
         super().__init__()
         self.pos_embed = pos_embed
@@ -222,40 +229,47 @@ class EEGformer(nn.Module):
 
     def decode(self, encoder_output: torch.Tensor, tgt:torch.Tensor):
         return self.decoder(encoder_output, tgt)
-
-    def project(self, x: torch.Tensor):
+    
+    def project(self, x:torch.tensor):
         return self.projector(x)
 
+
 def build_eegformer(
-       input_dim=128,
+       input_dim=9,
        d_model=128,
        h=8,
        N=3,
        num_embeddings=1024,
        commitment_cost=0.25,
+       epoch=100,
        dropout=0.1,
+       num_cls=5
        ):
+    
+    
+
     encoder_blocks = []
     for _ in range(N):
-        encoder_self_attention_block    = MultiHeadAttentionBlock(d_model, h, dropout)
-        encoder_feed_froward_block      = FeedForwardBlock(d_model, d_model * 4, dropout)
-        encoder_block                   = EncoderBlock(d_model, encoder_self_attention_block, encoder_feed_froward_block, dropout)
+        encoder_self_attention_block  = MultiHeadAttentionBlock(d_model, h, dropout)
+        encoder_feed_froward_block            = FeedForwardBlock(d_model, d_model * 4, dropout)
+        encoder_block        = EncoderBlock(d_model, encoder_self_attention_block, encoder_feed_froward_block, dropout)
         encoder_blocks.append(encoder_block)
     
     decoder_blocks = []
     for _ in range(N):
-        decoder_self_attention_block    = MultiHeadAttentionBlock(d_model, h, dropout)
-        decoder_cross_attention_block   = MultiHeadAttentionBlock(d_model, h, dropout)
-        feed_froward_block              = FeedForwardBlock(d_model, d_model * 4, dropout)
+        decoder_self_attention_block  = MultiHeadAttentionBlock(d_model, h, dropout)
+        decoder_cross_attention_block  = MultiHeadAttentionBlock(d_model, h, dropout)
+        feed_froward_block            = FeedForwardBlock(d_model, d_model * 4, dropout)
         decoder_block= DecoderBlock(d_model, decoder_self_attention_block, decoder_cross_attention_block, feed_froward_block, dropout)
         decoder_blocks.append(decoder_block)
 
-    positional_encoding     = PositionalEncoding(d_model, dropout)
-    encoder                 = EEGformerEncoder(d_model, nn.ModuleList(encoder_blocks))
-    vector_quantizer        = VectorQuantizer(num_embeddings, d_model, commitment_cost)
-    decoder                 = EEGformerDecoder(d_model, nn.ModuleList(decoder_blocks))
-    projector               = ProjectionLayer(d_model,input_dim)
+    positional_encoding = PositionalEncoding(d_model, input_dim, dropout)
+    encoder = EEGformerEncoder(d_model, nn.ModuleList(encoder_blocks))
+    vector_quantizer = VectorQuantizer(num_embeddings, d_model, commitment_cost)
+    decoder = EEGformerDecoder(d_model, nn.ModuleList(decoder_blocks))
+    projector = ProjectionLayer(input_dim, d_model, num_cls)
 
+    
     eegformer = EEGformer(positional_encoding, encoder, vector_quantizer, decoder, projector)
     
     for p in eegformer.parameters():

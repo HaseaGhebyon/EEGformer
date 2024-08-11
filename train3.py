@@ -16,6 +16,78 @@ from torcheeg.transforms import MinMaxNormalize, Select, ToTensor, Compose
 from config import get_config, get_database_name, get_weights_file_path, latest_weights_file_path
 from modelv2 import build_eegformer
 
+def dcsm(actuals, predictions):
+    # Class = 0,1,2,3,4 ()
+    actuals = actuals.cpu().detach().numpy()
+    predictions = predictions.cpu().detach().numpy()
+    actual_predict = np.zeros((5,5), dtype=int)
+    for act, pred in zip(actuals, predictions):
+        actual_predict[int(act), int(pred)] += 1
+    tp_all = 0
+    for i in range(5):
+        tp_all += actual_predict[i, i]
+    accuracy = tp_all/len(actuals)
+
+    # [] : TP, FN, FP, TN for every class
+    conf_mat = np.zeros((5,4), dtype=int)
+    for cls in range(5):
+        conf_mat[cls, 0] = actual_predict[cls, cls]
+        for i in range(1,5,1):
+            conf_mat[cls, 1] += actual_predict[cls, i]
+        for i in range(5):
+            if (i != cls):
+              conf_mat[cls, 2] += actual_predict[i, cls]
+        for i in range(5):
+            for j in range(5):
+                if (i != cls and j != cls):
+                    conf_mat[cls, 3] += actual_predict[i, j]
+    precision = 0
+    recall = 0
+    for i in range(5):
+        temp_prec = conf_mat[i, 0]/(conf_mat[i, 0] + conf_mat[i, 2])
+        precision += temp_prec
+        temp_rec = conf_mat[i, 0]/(conf_mat[i, 0] + conf_mat[i, 1])
+        recall += temp_rec
+    precision = precision/5
+    recall = recall/5
+    print(f"\nAcc : {accuracy} \t Prec : {precision} \t Recall : {recall}")
+    return accuracy, precision, recall
+
+def run_validation(model, validation_loader, device, global_step, writer):
+    model.eval()
+    validation_iterator = tqdm(validation_loader)
+    with torch.no_grad():
+        evoutputs = torch.zeros(len(validation_loader)).to(device)
+        evlabel = torch.zeros(len(validation_loader)).to(device)
+        idx = 0
+        for batch in (validation_iterator):
+            evlabel[idx] = batch[1].to(device)
+            input = batch[0].to(device)
+            output_pos_embed = model.embed_pos(input) # (Batch, EEGChannel, ONEDCNNfeature, Seq_Len") or (B, S, C, Le)
+            # print("Output Pos Shape : ", output_pos_embed.shape)
+
+            output_encoder = model.encode(output_pos_embed)
+            # print("Output Encoder Shape: ", output_encoder.shape)
+
+            output_vec_quantizer, vq_loss, _ = model.code_book(output_encoder)
+            # print("Output Quantizer Shape: ", output_vec_quantizer.shape)
+
+            output_decoder = model.decode(output_vec_quantizer, output_vec_quantizer)
+            # print("Output Decoder Shape: ", output_decoder.shape)
+            
+            output_projection = model.project(output_decoder)
+            # print("Output Projector Shape: ", output_projection.shape)
+            evoutputs[idx] = torch.argmax(output_projection)
+            idx += 1
+        acc, prec, rec = dcsm(evlabel, evoutputs)
+        if writer:
+            writer.add_scalar('Accuracy', acc, global_step)
+            writer.flush()
+            writer.add_scalar('Precision', prec, global_step)
+            writer.flush()
+            writer.add_scalar('Recall', rec, global_step)
+            writer.flush()
+
 def get_dataset(config):
     print("Retrieving dataset from database ...\n")
     X = np.random.randn(100, 32, 128)
@@ -42,13 +114,15 @@ def get_dataset(config):
 
 def get_model(config):
     return build_eegformer(
-       input_dim=128,
+       input_dim=9,
        d_model=128,
        h=8,
        N=3,
-       num_embeddings=512,
+       num_embeddings=1024,
        commitment_cost=0.25,
-       dropout=0.1,
+       epoch=100,
+       dropout=0.2,
+       num_cls=5
     )
 
 def train_model(config):
@@ -58,7 +132,7 @@ def train_model(config):
 
     train_dataloader, val_dataloader = get_dataset(config)
     model = get_model(config).to(device)
-    print(model)
+
     writer = SummaryWriter(config['datasource'] + "/" + config['experiment_name'])
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'], eps=1e-9)
@@ -77,13 +151,14 @@ def train_model(config):
     else:
         print("No model to preload, starting from scratch")
 
-    loss_fn = nn.MSELoss().to(device)
+    loss_fn = nn.CrossEntropyLoss(label_smoothing=0.1).to(device)
 
     for epoch in range(initial_epoch, config['num_epoch']):
         torch.cuda.empty_cache()
         model.train()
         batch_iterator = tqdm(train_dataloader, desc=f"Processing Epoch {epoch:02d}", position=0, leave=True)
         for batch in batch_iterator:
+            label = batch[1].to(device)
             input = batch[0].to(device) # (Batch, EEGChannel, Seq_Len) or (B, S, L)
             # print("Input Shape : ", input.shape)
 
@@ -102,8 +177,7 @@ def train_model(config):
             output_projection = model.project(output_decoder)
             # print("Output Projector Shape: ", output_projection.shape)
 
-            loss = loss_fn(output_projection, input).item() + vq_loss
-            # print(loss)
+            loss = loss_fn(output_projection, label).item() + vq_loss
             batch_iterator.set_postfix({"loss": f"{loss:6.3f}"})
             
             # Log the loss
@@ -117,15 +191,16 @@ def train_model(config):
             optimizer.zero_grad(set_to_none=True)
 
             global_step += 1
+        
+        run_validation(model, val_dataloader, device, global_step,writer)
 
-            if global_step % 10 == 0:
-                model_filename = get_weights_file_path(config, f"{epoch:02d}")
-                torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'global_step': global_step
-                }, model_filename + f"_{global_step}")
+        model_filename = get_weights_file_path(config, f"{epoch:02d}")
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'global_step': global_step
+        }, model_filename)
 
 
 warnings.filterwarnings("ignore")

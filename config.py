@@ -2,16 +2,16 @@ from pathlib import Path
 
 def get_config():
     return {
-        "batch_size" : 8,
-        "num_epoch" : 200,
+        "batch_size" : 1,
+        "num_epoch" : 1,
         "learning_rate" : 1e-05,
         "epsilon" : 1e-9,
-        "datasource" : "./database/3chan_277dp",
+        "datasource" : "./database/SUBJECTA_128seq_1024chunksize",
         "model_folder" : "weights",
         "model_basename" : "eegformer_model",
         "preload" : "latest",
-        "num_cls" : 5,
-        "experiment_name": "runs/eegformermodel",
+        "num_cls" : 0,
+        "experiment_name": "runs/eegformer",
         "transformer_size" : 1,
         
         # DATASET CONFIGURATION 
