@@ -210,11 +210,9 @@ Xtest = []
 ytest = []
 
 
-unique, counts = np.unique(y, return_counts=True)
 print("Composition Data After Sliding Window ")
 print("Train Data size : ", len(new_ytrain))
 print("Test Data size : ", len(new_ytest))
-print(dict(zip(unique, counts)))
 
 
 
