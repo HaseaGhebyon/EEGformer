@@ -237,7 +237,7 @@ new_Xtrain = np.array(new_Xtrain)
 np.save(path_eegnpy_train, new_Xtrain)
 
 new_Xtest = np.array(new_Xtest)
-np.save(path_eegnpy_train, new_Xtest)
+np.save(path_eegnpy_test, new_Xtest)
 
 
 new_ytrain = np.array(new_ytrain)
