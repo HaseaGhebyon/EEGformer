@@ -29,6 +29,7 @@ def get_config():
         "samp_freq" : 200.0,
         "bandpass_order" : 1,
         "datasample_per_label" : 200,
+        "img_dataset_dir" : "imgdataset"
     }
 
 def get_weights_file_path(config, epoch: str):
@@ -51,11 +52,23 @@ def get_root_database(config):
 def get_database_path(config):
     return str(Path(config["root"]) / "database"/ config["datasource"])
 
-def get_eegnpy_file(config):
-    return str(Path(config["root"]) / "database" / config["datasource"] / "eeg" / "eeg_data.npy")
+def get_eegnpy_train_file(config):
+    return str(Path(config["root"]) / "database" / config["datasource"] / "eegtrain" / "eeg_data.npy")
 
-def get_imgnpy_file(config):
-    return str(Path(config["root"]) / "database" /config["datasource"] / "img" / "imgeeg.npy")
+def get_eegnpy_test_file(config):
+    return str(Path(config["root"]) / "database" / config["datasource"] / "eegtest" / "eeg_data.npy")
 
-def get_labelnpy_file(config):
-    return str(Path(config["root"]) / "database" / config["datasource"] / "labeleeg.npy")
+def get_imgnpy_train_file(config):
+    return str(Path(config["root"]) / "database" /config["datasource"] / "imgtrain" / "imgeeg.npy")
+
+def get_imgnpy_test_file(config):
+    return str(Path(config["root"]) / "database" /config["datasource"] / "imgtest" / "imgeeg.npy")
+
+def get_labelnpy_train_file(config):
+    return str(Path(config["root"]) / "database" / config["datasource"] / "labeleeg_train.npy")
+
+def get_labelnpy_test_file(config):
+    return str(Path(config["root"]) / "database" / config["datasource"] / "labeleeg_test.npy")
+
+def get_imgdataset_dir(config):
+    return str(Path(config["root"]) / "imgdataset" )

@@ -179,7 +179,6 @@ print("Train Data size : ", len(ytrain))
 print("Test Data size : ", len(ytest))
 
 
-
 new_Xtrain = []
 new_ytrain = []
 for sample, label in tqdm(zip(Xtrain, ytrain), desc=f"Sliding across temporal train data", position=0, leave=True):
@@ -209,6 +208,7 @@ for sample, label in tqdm(zip(Xtest, ytest), desc=f"Sliding across temporal test
     new_Xtest += np.transpose(temp_chan, [1,0,2]).tolist()
 Xtest = []
 ytest = []
+
 
 unique, counts = np.unique(y, return_counts=True)
 print("Composition Data After Sliding Window ")
@@ -245,6 +245,7 @@ np.save(path_labelnpy_test, new_ytrain)
 
 new_ytest = np.array(new_ytest)
 np.save(path_labelnpy_test, new_ytest)
+
 
 # path_imgnpy_train = get_imgnpy_train_file(config)
 # path_imgnpy_test = get_imgnpy_test_file(config)
