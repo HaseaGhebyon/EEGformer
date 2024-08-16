@@ -4,17 +4,21 @@ from tqdm import tqdm
 from pathlib import Path
 
 import torch
-import torch.nn as nn 
+import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from focal_loss.focal_loss import FocalLoss
+from torchvision import transforms
 
-from torcheeg import model_selection
+from sklearn import model_selection
+
 from torcheeg.datasets import NumpyDataset
 from torcheeg.transforms import MinMaxNormalize, Select, ToTensor, Compose
 
-
-from config import get_config, get_database_name, get_weights_file_path, latest_weights_file_path
+from util.config import get_config, get_database_name, get_weights_file_path, latest_weights_file_path
 from model import build_eegformer
+
+from EEGImageDataset import EEGImageDataset
 
 def dcsm(actuals, predictions):
     # Class = 0,1,2,3,4 ()
@@ -50,7 +54,7 @@ def dcsm(actuals, predictions):
         recall += temp_rec
     precision = precision/5
     recall = recall/5
-    print(f"Acc : {accuracy} \t Prec : {precision} \t Recall : {recall}\n")
+    print(f"\nAcc : {accuracy} \t Prec : {precision} \t Recall : {recall}")
     return accuracy, precision, recall
 
 def run_validation(model, validation_loader, device, global_step, writer):
@@ -61,8 +65,8 @@ def run_validation(model, validation_loader, device, global_step, writer):
         evlabel = torch.zeros(len(validation_loader)).to(device)
         idx = 0
         for batch in (validation_iterator):
-            evlabel[idx] = batch[1].to(device)
-            onedcnn_input = batch[0].to(device)
+            evlabel[idx] = batch[1].to(device).to(torch.int64)
+            onedcnn_input = batch[0].to(device).squeeze(1)
             output_onedcnn = model.construct3D(onedcnn_input)
             output_encoder = model.encode(output_onedcnn)
             output_decoder = model.decode(output_encoder)
@@ -77,31 +81,23 @@ def run_validation(model, validation_loader, device, global_step, writer):
             writer.add_scalar('Recall', rec, global_step)
             writer.flush()
 
+
 def get_dataset(config):
     print("Retrieving dataset from database ...\n")
-    X = np.random.randn(100, 32, 128)
-    y = {
-        'valence': np.random.randint(10, size=100),
-        'arousal': np.random.randint(10, size=100)
-    }
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
 
-    dataset = NumpyDataset(X=X,
-                       y=y,
-                       io_path=config["datasource"],
-                       online_transform=ToTensor(),
-                       label_transform=Compose([
-                           Select('label')
-                       ]),
-                       num_worker=1,
-                       num_samples_per_worker=50)
     
-    train_dataset, val_dataset = model_selection.train_test_split(dataset=dataset, test_size=0.2, random_state=7, )
+
+    dataset = EEGImageDataset("./big_3chan_5st_277dp/eeg/eeg_data.npy", "./big_3chan_5st_277dp/labeleeg.npy", transform)
+    train_dataset, val_dataset = model_selection.train_test_split(dataset, test_size=0.2, random_state=7)
     train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True)
 
     return train_dataloader, val_dataloader
 
-def get_model(config):   
+def get_model(config):
     return build_eegformer(
         len(config["selected_channel"]),
         config["seq_len"],
@@ -124,7 +120,8 @@ def train_model(config):
     initial_epoch = 0
     global_step = 0
     preload = config["preload"]
-    
+
+
     model_filename = latest_weights_file_path(config) if preload == 'latest' else get_weights_file_path(config, preload) if preload else None
     if model_filename:
         print(f'Preloading model {model_filename}')
@@ -134,28 +131,25 @@ def train_model(config):
         global_step = state['global_step']
     else:
         print("No model to preload, starting from scratch")
-    
-    loss_fn = nn.CrossEntropyLoss(label_smoothing=0.1).to(device)
+
+    loss_fn = FocalLoss(gamma=0.7, weights=torch.FloatTensor([2, 2, 4, 4, 4]).to(device)).to(device)
 
     for epoch in range(initial_epoch, config['num_epoch']):
         torch.cuda.empty_cache()
         model.train()
         batch_iterator = tqdm(train_dataloader, desc=f"Processing Epoch {epoch:02d}", position=0, leave=True)
         for batch in batch_iterator:
-            label = batch[1].to(device)
-            onedcnn_input = batch[0].to(device) # (Batch, EEGChannel, Seq_Len) or (B, S, L)
+            label = batch[1].to(device).to(torch.int64)
+            onedcnn_input = batch[0].to(device).squeeze() # (Batch, EEGChannel, Seq_Len) or (B, S, L)
             # print("Input Shape : ", onedcnn_input.shape)
-            
             output_onedcnn = model.construct3D(onedcnn_input) # (Batch, EEGChannel, ONEDCNNfeature, Seq_Len") or (B, S, C, Le)
             # print("Output 1DCNN Shape : ", output_onedcnn.shape)
-
             output_encoder = model.encode(output_onedcnn)
             # print("Output Encoder Shape: ", output_encoder.shape)
-
             output_decoder = model.decode(output_encoder)
             # print("Output Decoder Shape: ", output_decoder.shape)
 
-            loss = loss_fn(output_decoder, label)
+            loss = loss_fn(output_decoder, label.detach())
             batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
 
             # Log the loss
@@ -169,9 +163,9 @@ def train_model(config):
             optimizer.zero_grad(set_to_none=True)
 
             global_step += 1
-        
+
         run_validation(model, val_dataloader, device, global_step,writer)
-        
+
         model_filename = get_weights_file_path(config, f"{epoch:02d}")
         torch.save({
             'epoch': epoch,
@@ -183,7 +177,7 @@ def train_model(config):
 
 warnings.filterwarnings("ignore")
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda:5" if torch.cuda.is_available() else "cpu"
 print("Using device:", device)
 if (device == 'cuda'):
     print(f"Device name: {torch.cuda.get_device_name(device.index)}")
