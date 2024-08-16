@@ -2,9 +2,6 @@ import torch
 import torch.nn as nn
 import math
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print("Device :", device)
-
 class OneDCNN(nn.Module):
     def __init__(self, in_chan, feature, dtype=torch.float32):
         super().__init__()
@@ -158,7 +155,7 @@ class MultiHeadAttentionBlockTemporal(nn.Module):
         if dropout is not None:
             attention_scores = dropout(attention_scores)
         return (attention_scores @ value), attention_scores
-
+    
     def forward(self, q, k, v, mask):
         query = self.w_q(q)
         key = self.w_k(k)
@@ -174,7 +171,7 @@ class MultiHeadAttentionBlockTemporal(nn.Module):
         return self.w_o(x)
 
 class EncoderBlock(nn.Module):
-    def __init__(self, features: int, self_attention_block: MultiHeadAttentionBlock | MultiHeadAttentionBlockTemporal, feed_forward_block: FeedForwardBlock, dropout: float) -> None:
+    def __init__(self, features: int, self_attention_block: 'MultiHeadAttentionBlock | MultiHeadAttentionBlockTemporal', feed_forward_block: FeedForwardBlock, dropout: float) -> None:      
         super().__init__()
         self.self_attention_block = self_attention_block
         self.feed_forward_block = feed_forward_block
@@ -259,7 +256,7 @@ class EEGformerEncoder(nn.Module):
     def forward(self, x):
         # REGIONAL PART
         # Class token
-        class_token_regional = torch.zeros(x.shape[0], x.shape[1], 1, x.shape[3]).to(device)
+        class_token_regional = torch.zeros(x.shape[0], x.shape[1], 1, x.shape[3]).to(x.device)
         x = torch.cat((class_token_regional, x), dim=2)
         # Linear Mapping
         x = self.linear_before_regional(x)
@@ -272,7 +269,7 @@ class EEGformerEncoder(nn.Module):
         # Transpose x
         x = x.transpose(1, 2)
         # Class token
-        class_token_sync = torch.zeros(x.shape[0], x.shape[1], 1, x.shape[3]).to(device)
+        class_token_sync = torch.zeros(x.shape[0], x.shape[1], 1, x.shape[3]).to(x.device)
         x = torch.cat((class_token_sync, x), dim=2)
         # Linear Mapping
         x = self.linear_before_sync(x)
@@ -290,7 +287,7 @@ class EEGformerEncoder(nn.Module):
         # Flatten
         x = x.flatten(start_dim=-2)
         # Class token
-        class_token_temp = torch.zeros(x.shape[0], 1, x.shape[2]).to(device)
+        class_token_temp = torch.zeros(x.shape[0], 1, x.shape[2]).to(x.device)
         x = torch.cat((class_token_temp, x), dim=1)
         # Linear Mapping untuk dapat latent z
         x = self.linear_before_temporal(x)
@@ -298,7 +295,6 @@ class EEGformerEncoder(nn.Module):
         x = self.positional_encoding_temporal(x)
         x = self.temporal_encoder(x, None)
         # print("Temporal Out shape : ", x.shape)
-
         return x
 
 class EEGformerDecoder(nn.Module):
@@ -313,6 +309,7 @@ class EEGformerDecoder(nn.Module):
         self.conv_2 = nn.Conv1d(features_s, hidden_features, kernel_size=1)
         self.conv_3 = nn.Conv1d(features_m, int(features_m/2), kernel_size=1)
         self.proj = nn.Linear(int(features_m/2) * hidden_features, num_cls)
+        self.gelu = nn.GELU()
 
     def forward(self, x):
         # print("INSIDE DECODER")
@@ -323,24 +320,25 @@ class EEGformerDecoder(nn.Module):
         x = x.reshape(init_shape[0] * init_shape[1], self.patch_sync, self.patch_regional).transpose(1,2) # 88, 4,121
         # print(x.shape)
         x = self.conv_1(x)
-
+        x = self.gelu(x)
         x = x.transpose(1,2)
         # print(x.shape)
         x = self.conv_2(x)
-
+        x = self.gelu(x)
         x = x.reshape(init_shape[0], init_shape[1], x.shape[1], x.shape[2])
         x = x.transpose(1,2)
         x = x.reshape(x.shape[0] * x.shape[1], x.shape[2], x.shape[3])
         # print(x.shape)
         x = self.conv_3(x)
-
+        x = self.gelu(x)
         x = x.reshape(init_shape[0], self.hidden_features, self.num_cls, 1)
         x = x.reshape(init_shape[0], self.hidden_features * self.num_cls, 1)
         x = x.reshape(init_shape[0], self.hidden_features * self.num_cls)
         # print(x.shape)
         x = self.proj(x)
         # print(x.shape)
-        return torch.softmax(x, dim=1)
+        x = torch.softmax(x, dim=1)
+        return x
 
 class EEGformer(nn.Module):
     def __init__(self,
@@ -361,7 +359,6 @@ class EEGformer(nn.Module):
 
     def decode(self, encoder_output: torch.Tensor):
         return self.decoder(encoder_output)
-
 
 def build_eegformer(
         channel_size: int,
@@ -411,12 +408,12 @@ def build_eegformer(
         feed_froward_block            = FeedForwardBlock(map_f_channel, map_f_channel * scaler_ffn, dropout)
         temp_encoder_block            = EncoderBlock(map_f_channel, encoder_self_attention_block, feed_froward_block, dropout)
         temp_encoder_blocks.append(temp_encoder_block)
-
+    
     regional_encoder = RegionalEncoder(conv_temporal, nn.ModuleList(regional_encoder_blocks))
     sync_encoder = SyncEncoder(conv_temporal, nn.ModuleList(sync_encoder_blocks))
     temp_encoder = TemporalEncoder(map_f_channel, nn.ModuleList(temp_encoder_blocks))
 
-    eegformer_encoder = EEGformerEncoder(regional_encoder, sync_encoder, temp_encoder, conv_temporal, patch_regional, patch_sync, sub_matrices)
-    eegformer_decoder = EEGformerDecoder(patch_sync, patch_regional, patch_temporal, feature_decoder, num_cls, patch_regional, patch_sync)
+    eegformer_encoder = EEGformerEncoder(regional_encoder, sync_encoder, temp_encoder, conv_temporal, patch_regional, patch_sync, sub_matrices)    
+    eegformer_decoder = EEGformerDecoder(patch_sync, patch_regional, patch_temporal, feature_decoder, num_cls, patch_regional, patch_sync)                         
     eegformer = EEGformer(onedcnn, eegformer_encoder, eegformer_decoder)
     return eegformer

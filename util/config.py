@@ -46,6 +46,9 @@ def latest_weights_file_path(config):
     weights_files.sort()
     return str(weights_files[-1])
 
+def get_logging_folder(config):
+    return str(get_database_path(config) / config["experiment_name"])
+
 def get_root_database(config):
     return str(Path(config["root"]) / "database")
 
