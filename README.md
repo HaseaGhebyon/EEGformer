@@ -147,8 +147,8 @@ def get_config():
 | **dataset_dir**       | Path of the EEG dataset. "/<root>/dataset"                    |
 | **low_cut**           | Bandpass filter low cut (default 0.57)                        |
 | **high_cut**          | Bandpass filter high cut (default 70)                         |
-| **samp_freq**         | Sampling frequency (200Hz by default). Type : Integer         |
-| **bandpass_order**    | Order for Bandpass filtering                                  |
+| **samp_freq**         | Sampling frequency (200Hz by default)         |
+| **bandpass_order**    | Order for Bandpass. Type : Integer filtering                                  |
 | **datasample_per_label** | *Deprecated!* Same with samp_freq                          |
 | **img_dataset_dir**   | Number of class to classify                                   |
 
