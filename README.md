@@ -17,13 +17,13 @@
 
 <div align="center">
 
-[![Awesome](https://github.com/refinedev/awesome-refine/raw/main/images/badge.svg)](https://github.com/refinedev/awesome-refine)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8101/badge)](https://www.bestpractices.dev/projects/8101)
-[![npm version](https://img.shields.io/npm/v/@refinedev/core.svg)](https://www.npmjs.com/package/@refinedev/core)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
-[![Discord](https://img.shields.io/discord/837692625737613362.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/refine)
-[![Twitter Follow](https://img.shields.io/twitter/follow/refine_dev?style=social)](https://twitter.com/refine_dev)
+[![Python Version](https://img.shields.io/badge/Python-green?logo=python)](https://www.npmjs.com/package/@refinedev/core)
+[![CUDA version](https://img.shields.io/badge/CUDA-black?logo=nvidia)](https://www.npmjs.com/package/@refinedev/core)
+[![PyTorch version](https://img.shields.io/badge/PyTorch-white?logo=pytorch)](https://www.npmjs.com/package/@refinedev/core)
+
+[![Instagram Follow](https://img.shields.io/badge/Follow%20Me-white?logo=instagram)](https://www.instagram.com/ghebyon_ngl/)
+[![LinkedIn Follow](https://img.shields.io/badge/ConnectWith%20Me-black?logo=github)](https://www.linkedin.com/in/ghebyonnainggolan/)
 
 </div>
 <br/>
