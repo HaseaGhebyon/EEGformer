@@ -6,9 +6,10 @@
 <br/>
 
 <div align="center">
-    <strong>The sweet spot between the low/no code and “starting from scratch” for CRUD-heavy applications.</strong>
-    <br>
-    Refine is as an open source, React meta-framework for enterprise. It provides a headless solution for everything from admin panels to dashboards and internal tools.
+    <strong>
+        Image Generation using Brain Wave Activity (Electroencephalogram) Motor Imagery Case using Autoencoder and Transformer Based Model.
+    </strong>
+    Specifically, EEGformer and Variatonal Autoencoder (VAE)
 <br />
 <br />
 
@@ -30,53 +31,55 @@
 
 
 
-## What is Refine?
+## What is Electroencephalogram?
 
-**Refine** is a React meta-framework for CRUD-heavy web applications. It addresses a wide range of enterprise use cases including internal tools, admin panels, dashboards and B2B apps.
+**Electroencephalogram (EEG)** is one of the sensors commonly used in the medical field. EEG sensors are used by recording human brain waves to measure biometric data. This biometric data will then be decoded to understand the physical and psychological conditions or status of the subject underlying the EEG signal. The basic principle of the EEG sensor is to detect electrical activity that occurs in the human brain (subject).
 
-Refine's core hooks and components streamline the development process by offering industry-standard solutions for crucial aspects of a project, including **authentication**, **access control**, **routing**, **networking**, **state management**, and **i18n**.
+## ⚡ Understand Directory Structure
 
-Refine's headless architecture enables the building of highly customizable applications by decoupling business logic from UI and routing. This allows integration with:
-
-- Any custom designs or UI frameworks like [TailwindCSS](https://tailwindcss.com/), along with built-in support for [Ant Design](https://ant.design/), [Material UI](https://mui.com/material-ui/getting-started/overview/), [Mantine](https://mantine.dev/), and [Chakra UI](https://chakra-ui.com/).
-
-- Various platforms, including Next.js, Remix, React Native, Electron, etc., by a simple routing interface without the need for additional setup steps.
-
-## ⚡ Pahami Struktur Direktori
-
-### Struktur Folder
+### Directory Structure
 ```
 EEGformer/
 │
-├── database/
+├── 📁database/
 │
-├── dataset/
+├── 📁dataset/
 │
-├── util/
+├── 📁util/
 │   │
-│   ├── config.py
+│   ├── 📃config.py
 │   │
-│   └── generate_MI_database.py
+│   └── 📃generate_MI_database.py
 │
-├── EEGDataset.py                   # deprecated
+├── 📃EEGDataset.py                   # deprecated
 │
-├── model.py                        # EEGformer for classification
+├── 📃model.py                        # EEGformer for classification
 │
-├── model_vae.py                    # VAE for Image generation
+├── 📃model_vae.py                    # VAE for Image generation
 │
-├── trainer_classification.py       # Trainer for EEGformer classifications
+├── 📃trainer_classification.py       # Trainer for EEGformer classifications
 │
-├── trainer_vae.py                  # Trainer for VAE image generation
+├── 📃trainer_vae.py                  # Trainer for VAE image generation
 │
-├── trainer_class_vae.py            # Trainer/Pipline for EEG Image Generation
+├── 📃trainer_class_vae.py            # Trainer/Pipline for EEG Image Generation
 │
-└── train.py                        # deprecated
+└── 📃train.py                        # deprecated
 ```
 
 
-## ⚡ Preparation
+## ⚡ PREPARATION
 
-### Konfigurasi
+### DATASET PREPARATION
+
+...
+
+### PROCESSING DATASET & GENERATE PROCESSED DATASET
+
+...
+
+## 😀 LET'S GET STARTED
+
+### 1. Configuration
 
 Here is the configuration file (found at <a href="./util/config.py">./util/config.py</a>). It is used for the entire code, so please check it carefully when you want to run the training.
 
@@ -114,61 +117,23 @@ def get_config():
     }
 ```
 
-The result will look like this:
+...
 
-[![Refine + Material UI Example](https://refine.ams3.cdn.digitaloceanspaces.com/assets/refine-mui-simple-example-screenshot-rounded.webp)](https://refine.new/preview/c85442a8-8df1-4101-a09a-47d3ca641798)
 
-## Use cases
+### 2. EEGformer Training
 
-**Refine** shines on _data-intensive⚡_ enterprise B2B applications like **admin panels**, **dashboards** and **internal tools**. Thanks to the built-in **SSR support**, it can also power _customer-facing_ applications like **storefronts**.
+...
 
-You can take a look at some live examples that can be built using **Refine** from scratch:
+### 3. VAE Training
 
-- [Fully-functional CRM Application](https://refine.dev/templates/crm-application/)
-- [Fully-functional Admin Panel](https://refine.dev/templates/react-admin-panel/)
-- [Win95 Style Admin panel 🪟](https://refine.dev/templates/win-95-style-admin-panel/)
-- [PDF Invoice Generator](https://refine.dev/templates/react-pdf-invoice-generator/)
-- [Medium Clone - Real World Example](https://refine.dev/templates/react-crud-app/)
-- [Multitenancy Example](https://refine.dev/templates/multitenancy-strapi/)
-- [Storefront](https://refine.dev/templates/next-js-ecommerce-store/)
-- [Refer to templates page for more examples](https://refine.dev/templates/)
-- [More **Refine** powered different usage scenarios can be found here](https://refine.dev/docs/examples#other-examples)
+...
 
-## Key Features
+### 4. Training/Pipeline of Image Generation using EEG
 
-- Refine Devtools - dive deeper into your app and provide useful insights
-- Connectors for **15+ backend services** including [REST API](https://github.com/refinedev/refine/tree/master/packages/simple-rest), [GraphQL](https://github.com/refinedev/refine/tree/master/packages/graphql), [NestJs CRUD](https://github.com/refinedev/refine/tree/master/packages/nestjsx-crud), [Airtable](https://github.com/refinedev/refine/tree/master/packages/airtable), [Strapi](https://github.com/refinedev/refine/tree/master/packages/strapi), [Strapi v4](https://github.com/refinedev/refine/tree/master/packages/strapi-v4), [Supabase](https://github.com/refinedev/refine/tree/master/packages/supabase), [Hasura](https://github.com/refinedev/refine/tree/master/packages/hasura), [Appwrite](https://github.com/refinedev/refine/tree/master/packages/appwrite), [Nestjs-Query](https://github.com/refinedev/refine/tree/master/packages/nestjs-query), [Firebase](https://firebase.google.com/), [Sanity](https://www.sanity.io/), and [Directus](https://directus.io/).
-- SSR support with Next.js & Remix and Advanced routing with any router library of your choice
-- Auto-generation of CRUD UIs based on your API data structure
-- Perfect state management & mutations with React Query
-- Providers for seamless authentication and access control flows
-- Out-of-the-box support for live / real-time applications
-- Easy audit logs & document versioning
+...
 
-## Learning Refine
 
-- Navigate to the [Tutorial](https://refine.dev/docs/tutorial/introduction/index/) on building comprehensive CRUD application guides you through each step of the process.
-- Visit the [Guides & Concepts](https://refine.dev/docs/guides-concepts/general-concepts/) to get informed about the fundamental concepts.
-- Read more on [Advanced Tutorials](https://refine.dev/docs/advanced-tutorials/) for different usage scenarios.
-
-## Contribution
-
-[Refer to the contribution docs for more information.](https://refine.dev/docs/contributing/#ways-to-contribute)
-
-If you have any doubts related to the project or want to discuss something, then join our [Discord server](https://discord.gg/refine).
-
-## Contributors ♥️ Thanks
-
-We extend our gratitude to all our numerous contributors who create plugins, assist with issues and pull requests, and respond to questions on Discord and GitHub Discussions.
-
-Refine is a community-driven project, and your contributions continually improve it.
-
-<br/>
-
-<a href="https://github.com/refinedev/refine/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=refinedev/refine&max=400&columns=20" />
-</a>
 
 ## License
 
-Licensed under the MIT License, Copyright © 2021-present Refinedev
+Licensed under the MIT License, Copyright © 2024-Ghebyon Tohada Nainggolan
