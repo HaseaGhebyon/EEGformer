@@ -1,24 +1,14 @@
 <div align="center">
 <img alt="refine logo" src="./docs/img/title-image.png">
-
+</div>
 
 <br/>
 <br/>
 
 <div align="center">
-    <a href="https://refine.dev">Home Page</a> |
-    <a href="https://refine.dev/docs/">Documentation</a> |
-    <a href="https://refine.dev/examples/">Examples</a> |
-    <a href="https://discord.gg/refine">Discord</a> |
-    <a href="https://refine.dev/blog/">Blog</a>
-</div>
-
-</div>
-
-<br/>
-<br/>
-
-<div align="center"><strong>The sweet spot between the low/no code and “starting from scratch” for CRUD-heavy applications.</strong><br> Refine is as an open source, React meta-framework for enterprise. It provides a headless solution for everything from admin panels to dashboards and internal tools.
+    <strong>The sweet spot between the low/no code and “starting from scratch” for CRUD-heavy applications.</strong>
+    <br>
+    Refine is as an open source, React meta-framework for enterprise. It provides a headless solution for everything from admin panels to dashboards and internal tools.
 <br />
 <br />
 
@@ -38,7 +28,7 @@
 
 <br/>
 
-[![how-refine-works](https://refine.ams3.cdn.digitaloceanspaces.com/website/static/img/diagram-3.png)](https://refine.dev)
+
 
 ## What is Refine?
 
@@ -83,19 +73,10 @@ EEGformer/
 └── train.py                        # deprecated
 ```
 
-Start a new project with Refine in seconds using the following command:
 
-```sh
-npm create refine-app@latest my-refine-app
-```
+## ⚡ Preparation
 
-Or you can create a new project on your browser:
-
-<a href="https://refine.dev/?playground=true" target="_blank">
-  <img height="48" width="245" src="https://refine.ams3.cdn.digitaloceanspaces.com/assets/try-it-in-your-browser.png" />
-</a>
-
-## Konfigurasi
+### Konfigurasi
 
 Here is the configuration file (found at <a href="./util/config.py">./util/config.py</a>). It is used for the entire code, so please check it carefully when you want to run the training.
 
