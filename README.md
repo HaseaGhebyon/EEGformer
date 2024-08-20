@@ -128,7 +128,7 @@ def get_config():
 
 | **Key**               | **Description**                                               |
 |-----------------------|---------------------------------------------------------------|
-| **batch_size**        | Number of batch size for training                             |
+| **batch_size**        | Number of batch size for training. For safety use 32 only                             |
 | **num_epoch**         | *Deprecated!* Number of epochs                                |
 | **learning_rate**     | Learning rate for training optimizer                          |
 | **epsilon**           | Epsilon for training optimizer                                |
@@ -144,7 +144,7 @@ def get_config():
 | **selected_channel**  | Selected Channel for model dan generated dataset(Order Sensitive)|
 | **seq_len**           | Sequence Length (Temporal length). Currently model only work with 120 data points|
 | **sliding_step**      | Number of step for sliding window                             |
-| **dataset_dir**       | Path of the EEG dataset. "/<root>/dataset"                    |
+| **dataset_dir**       | Path of the EEG dataset. "/_root_/dataset"                    |
 | **low_cut**           | Bandpass filter low cut (default 0.57)                        |
 | **high_cut**          | Bandpass filter high cut (default 70)                         |
 | **samp_freq**         | Sampling frequency (200Hz by default)         |
