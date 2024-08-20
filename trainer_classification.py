@@ -7,6 +7,7 @@ from pathlib import Path
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader 
 from torch.utils.tensorboard import SummaryWriter
+from torchmetrics.classification import Accuracy, Precision, Recall, ConfusionMatrix
 
 import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
@@ -53,7 +54,8 @@ class Trainer:
             print(f'Preloading model {self.model_filename}')
             self._load_snapshot(self.model_filename)
         else:
-            print("No model to preload, starting from scratch")
+            if (self.gpu_id == 0):
+                print("No model to preload, starting from scratch")
         self.model = DDP(self.model, device_ids=[self.gpu_id])
 
 
@@ -80,23 +82,27 @@ class Trainer:
     def train(self, max_epochs: int):
 
         Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
-        loss_fn = FocalLoss(gamma=0.6, weights=torch.FloatTensor([0.2, 0.2, 0.5, 0.5, 0.5]))
+        loss_fn = FocalLoss(gamma=0.7, weights=torch.FloatTensor([3.25, 2.22, 7.95, 7.49, 8.17]).to(self.gpu_id)).to(self.gpu_id)
 
         for epoch in range(self.epochs_run, max_epochs):
-            b_sz = len(next(iter(self.train_data))[0])
-            print(f"[GPU{self.gpu_id}] Epoch {epoch} | Batchsize: {b_sz} | Steps: {len(self.train_data)}")
             self.train_data.sampler.set_epoch(epoch)
             train_iterator = tqdm(self.train_data, desc=f"Processing Epoch {epoch:02d}", position=0, leave=True)
             for source, targets in train_iterator:
-                source = source.to(self.gpu_id)
+                # print(source.type())
+                if source.shape[0] != config['batch_size']:
+                    continue
+                source = source.to(torch.float32).to(self.gpu_id)
                 targets = targets.to(self.gpu_id)
                 
                 self.optimizer.zero_grad()
                 source = source.squeeze()
+                # print("1:", source.shape)
                 output1 = self.model.module.construct3D(source)
+                # print("2:", output1.shape)
                 output2 = self.model.module.encode(output1)
+                # print("3:",output2.shape)
                 output3 = self.model.module.decode(output2)
-                
+                # print("4:", output3.shape)
                 loss = loss_fn(output3, targets)
 
                 if (self.gpu_id == 0):
@@ -119,24 +125,36 @@ class Trainer:
             evoutputs = torch.zeros(len(test_iterator))
             evlabel = torch.zeros(len(test_iterator))
             idx = 0
+
             for batch in (test_iterator):
-                evlabel[idx] = batch[1].to(self.gpu_id).to(torch.int64)
-                onedcnn_input = batch[0].to(self.gpu_id).squeeze(1)
+                onedcnn_input = batch[0].squeeze(1).to(torch.float32).to(self.gpu_id)
                 output_onedcnn = self.model.module.construct3D(onedcnn_input)
                 output_encoder = self.model.module.encode(output_onedcnn)
                 output_decoder = self.model.module.decode(output_encoder)
-                evoutputs[idx] = torch.argmax(output_decoder)
+                
+                evlabel[idx] = batch[1].detach().cpu().to(torch.int64)
+                evoutputs[idx] = torch.argmax(output_decoder.detach().cpu(), dim=-1)
+                idx += 1
+            
+            metricAcc = Accuracy(task='multiclass', num_classes=config["num_cls"])
+            acc = metricAcc(evoutputs, evlabel)
+            
+            metricPrec = Precision(task='multiclass', num_classes=config["num_cls"])
+            prec = metricPrec(evoutputs, evlabel)
+            
+            metricRec = Recall(task='multiclass', num_classes=config["num_cls"])
+            rec = metricRec(evoutputs, evlabel)
 
-            acc, prec, rec = self.calculate_dcsm(evlabel, evoutputs)
-            if self.writer:
-                self.writer.add_scalar(f'GPU[{self.gpu_id}] ACCURACY', acc, self.global_step)
-                self.writer.flush()
-                self.writer.add_scalar(f'GPU[{self.gpu_id}] PRECISION', prec, self.global_step)
-                self.writer.flush()
-                self.writer.add_scalar(f'GPU[{self.gpu_id}] RECALL', rec, self.global_step)
-                self.writer.flush()
+            confMat = ConfusionMatrix(task='multiclass', num_classes=config["num_cls"])
+            conf = confMat(evoutputs, evlabel)
+            print(
+                f"[GPU{self.gpu_id}] Acc: {acc} \t Precision: {prec} \t Recall: {rec}"
+            )
+            print(
+                f"Confusion Matrix : \n{conf}"
+            )
 
-    def calculate_dcsm(self):
+    def calculate_dcsm(self, actuals, predictions):
         actuals = actuals.cpu().detach().numpy()
         predictions = predictions.cpu().detach().numpy()
         actual_predict = np.zeros((5,5), dtype=int)
@@ -176,7 +194,6 @@ class Trainer:
             return accuracy, precision, recall
 
 def load_train_objs():
-    print("Retrieving dataset from database ...\n")
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor()
     ])
@@ -191,7 +208,7 @@ def load_train_objs():
         transform_eeg=transform
     )
     model = build_eegformer(
-        config=len(config["selected_channel"]),
+        channel_size=len(config["selected_channel"]),
         seq_len=config["seq_len"],
         N=config["transformer_size"],
         feature_onedcnn=120,

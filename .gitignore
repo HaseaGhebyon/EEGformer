@@ -1,5 +1,7 @@
 database/
 
+dataset/
+
 __pycache__/
 
 EEGformer/

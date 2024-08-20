@@ -4,26 +4,26 @@ def get_config():
     return {
         # MODEL & TRAINER CONFIGURATION
         "batch_size" : 32,
-        "num_epoch" : 1000,
+        "num_epoch" : 500,
         "learning_rate" : 1e-04,
         "epsilon" : 1e-9,
         "num_cls" : 5,
         "transformer_size" : 1,
 
         "root" : "/raid/data/m13520079/EEGformer",
-        "datasource" : "medium_3chan_5st_277dp",
+        "datasource" : "21chan_5st_120dp_20step",
         "model_folder" : "weights",
         "model_basename" : "eegformer_model",
         "experiment_name": "runs/eegformermodel",
         "preload" : "latest",
 
         "channel_order" : ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],        
-        "selected_channel" : ['C3', 'Cz', 'C4'],
+        "selected_channel" : ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],
         "seq_len" :120,
-        "sliding_step": 1,
+        "sliding_step": 20,
 
         # DATASET CONFIGURATION
-        "dataset_dir" : "E:\Ghebyon's\Dataset\Motor Imagery",#"./dataset",
+        "dataset_dir" : "/raid/data/m13520079/EEGformer/dataset",
         "low_cut" : 0.57, #Hz
         "high_cut" : 70.0,
         "samp_freq" : 200.0,
@@ -43,11 +43,18 @@ def latest_weights_file_path(config):
     weights_files = list(Path(model_folder).glob(model_filename))
     if len(weights_files) == 0:
         return None
-    weights_files.sort()
-    return str(weights_files[-1])
+
+    latest_file = ""
+    latest_epoch = 0
+    for file in weights_files:
+        splitted = str(file).split("_")
+        if (int(splitted[-1]) > latest_epoch):
+            latest_epoch = int(splitted[-1])
+            latest_file = file
+    return str(latest_file)
 
 def get_logging_folder(config):
-    return str(get_database_path(config) / config["experiment_name"])
+    return str(Path(get_database_path(config)) / config["experiment_name"])
 
 def get_root_database(config):
     return str(Path(config["root"]) / "database")
@@ -74,4 +81,4 @@ def get_labelnpy_test_file(config):
     return str(Path(config["root"]) / "database" / config["datasource"] / "labeleeg_test.npy")
 
 def get_imgdataset_dir(config):
-    return str(Path(config["root"]) / "imgdataset" )
+    return str(Path(config["root"]) / "dataset_img" )

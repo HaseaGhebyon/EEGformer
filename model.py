@@ -3,15 +3,15 @@ import torch.nn as nn
 import math
 
 class OneDCNN(nn.Module):
-    def __init__(self, in_chan, feature, dtype=torch.float32):
+    def __init__(self, in_chan, feature, kernel_size, dtype=torch.float32):
         super().__init__()
         self.in_chan = in_chan
         self.dtype = dtype
         self.feature = feature
 
-        self.conv1 = nn.Conv1d(self.in_chan, self.in_chan, kernel_size=10, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
-        self.conv2 = nn.Conv1d(self.in_chan, self.in_chan, kernel_size=10, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
-        self.conv3 = nn.Conv1d(self.in_chan, self.feature * self.in_chan, kernel_size=10, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
+        self.conv1 = nn.Conv1d(self.in_chan, self.in_chan, kernel_size=kernel_size, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
+        self.conv2 = nn.Conv1d(self.in_chan, self.in_chan, kernel_size=kernel_size, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
+        self.conv3 = nn.Conv1d(self.in_chan, self.feature * self.in_chan, kernel_size=kernel_size, stride=1, padding='valid', groups=self.in_chan, dtype=self.dtype)
         self.gelu = nn.GELU()
 
     def forward(self, x):
@@ -24,8 +24,8 @@ class OneDCNN(nn.Module):
 
         x = self.conv3(x)
         x = self.gelu(x)
-
-        x = torch.reshape(x, (x.shape[0], (int)(x.shape[1]/self.feature), self.feature, (int)(x.shape[2])))
+        # print("TEST from inside: ", x.shape)
+        x = torch.reshape(x, (x.shape[0], (int)(x.shape[1]/self.feature), self.feature, x.shape[2]))
         return x
 
 class LayerNormalization(nn.Module):
@@ -93,7 +93,7 @@ class MultiHeadAttentionBlock(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.h = h
-
+        
         assert d_model % h == 0, "d_model is not divisible by h"
 
         self.d_k = d_model // h
@@ -165,7 +165,7 @@ class MultiHeadAttentionBlockTemporal(nn.Module):
         key = key.view(key.shape[0], key.shape[1], self.h, self.d_k).transpose(1, 2)
         value = value.view(value.shape[0], value.shape[1], self.h, self.d_k).transpose(1, 2)
 
-        x, self.attention_scores = MultiHeadAttentionBlock.attention(query, key, value, mask, self.dropout)
+        x, self.attention_scores = MultiHeadAttentionBlockTemporal.attention(query, key, value, mask, self.dropout)
         x = x.transpose(1, 2).contiguous().view(x.shape[0], -1, self.h * self.d_k)
 
         return self.w_o(x)
@@ -238,7 +238,6 @@ class EEGformerEncoder(nn.Module):
         self.patch_temporal = submetric_temporal + 1
 
         self.submetric_size = patch_region * patch_sync
-
         self.linear_before_regional = nn.Linear(onedcnn_seq, onedcnn_seq)
         self.positional_encoding_regional = PositionalEncoding(onedcnn_seq, self.patch_region, 0.1)
 
@@ -304,6 +303,9 @@ class EEGformerDecoder(nn.Module):
         self.patch_sync = patch_sync
         self.num_cls = num_cls
         self.hidden_features = hidden_features
+        self.feature_s = features_s
+        self.feature_c = features_c
+        self.feature_m = features_m
 
         self.conv_1 = nn.Conv1d(features_c, 1, kernel_size=1)
         self.conv_2 = nn.Conv1d(features_s, hidden_features, kernel_size=1)
@@ -314,30 +316,25 @@ class EEGformerDecoder(nn.Module):
     def forward(self, x):
         # print("INSIDE DECODER")
 
-        x = x.reshape(x.shape[0], x.shape[1], self.patch_sync, self.patch_regional) # 8,11,4,121
+        x = x.reshape(x.shape[0], x.shape[1], self.patch_sync, self.patch_regional)
         init_shape = x.shape
-        # print("Init : ", init_shape)
-        x = x.reshape(init_shape[0] * init_shape[1], self.patch_sync, self.patch_regional).transpose(1,2) # 88, 4,121
-        # print(x.shape)
+        x = x.reshape(init_shape[0] * init_shape[1], self.patch_sync, self.patch_regional).transpose(1,2)
         x = self.conv_1(x)
         x = self.gelu(x)
         x = x.transpose(1,2)
-        # print(x.shape)
         x = self.conv_2(x)
         x = self.gelu(x)
         x = x.reshape(init_shape[0], init_shape[1], x.shape[1], x.shape[2])
         x = x.transpose(1,2)
         x = x.reshape(x.shape[0] * x.shape[1], x.shape[2], x.shape[3])
-        # print(x.shape)
         x = self.conv_3(x)
         x = self.gelu(x)
-        x = x.reshape(init_shape[0], self.hidden_features, self.num_cls, 1)
-        x = x.reshape(init_shape[0], self.hidden_features * self.num_cls, 1)
-        x = x.reshape(init_shape[0], self.hidden_features * self.num_cls)
-        # print(x.shape)
+        x = x.reshape(init_shape[0], self.hidden_features, x.shape[1], 1)
+        x = x.reshape(init_shape[0], self.hidden_features * x.shape[2], 1)
+        x = x.squeeze()
         x = self.proj(x)
         # print(x.shape)
-        x = torch.softmax(x, dim=1)
+        x = torch.softmax(x, dim=-1)
         return x
 
 class EEGformer(nn.Module):
@@ -375,8 +372,7 @@ def build_eegformer(
         num_cls: int=5,
         scaler_ffn: int=4):
 
-    # Calculate some feature size
-    conv_temporal = seq_len - 3 * (kernel_size - 1) # 350 = 377 - 27
+    conv_temporal = seq_len - 3 * (kernel_size - 1) 
     assert conv_temporal % sub_matrices == 0, "Temporal Sequence (conv_temporal) is not divisible by Sub Matrices (sub_matrices).\nCheck length of EEG sequence after processed by OneDCNN"
 
     patch_regional = feature_onedcnn + 1
@@ -384,9 +380,7 @@ def build_eegformer(
     patch_temporal = sub_matrices + 1
 
     map_f_channel = patch_regional * patch_sync
-
-    onedcnn = OneDCNN(channel_size, feature_onedcnn)
-    # Output Shape OneDCNN without Batch
+    onedcnn = OneDCNN(channel_size, feature_onedcnn, kernel_size)
 
     regional_encoder_blocks = []
     for _ in range(N):

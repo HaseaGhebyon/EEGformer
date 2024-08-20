@@ -123,7 +123,7 @@ for file_path in file_iterator:
     
     # Lakukan Filter Bandpass jika diperlukan. Harus dilakukan sebelum Resampling (Downsampling)
     for idx, channel in enumerate(eeg_data):
-        eeg_data[idx] = butter_bandpass_filter(channel, 0.57, 70.0, 200, 1)
+        eeg_data[idx] = butter_bandpass_filter(channel, config["low_cut"], config["high_cut"], 200, 1)
     # Downsampling sinyal EEG HFREQ (1000Hz menjadi 200 Hz)
     if experiment["samp_freq"] == 1000:
         eeg_data = eeg_data[:,::5]
@@ -245,38 +245,40 @@ new_ytest = np.array(new_ytest)
 np.save(path_labelnpy_test, new_ytest)
 
 
-# path_imgnpy_train = get_imgnpy_train_file(config)
-# path_imgnpy_test = get_imgnpy_test_file(config)
+path_imgnpy_train = get_imgnpy_train_file(config)
+path_imgnpy_test = get_imgnpy_test_file(config)
 
 
-# # LOAD PAIRED IMAGE DATA (RANDOM ASSIGNMENTS)
-# transform = torchvision.transforms.Compose([
-#         torchvision.transforms.Grayscale(num_output_channels=1),
-#         torchvision.transforms.ToTensor(),
-#         torchvision.transforms.Normalize((0.5,), (0.5,)),
-#     ])
+# LOAD PAIRED IMAGE DATA (RANDOM ASSIGNMENTS)
+transform = torchvision.transforms.Compose([
+        torchvision.transforms.Grayscale(num_output_channels=1),
+        torchvision.transforms.ToTensor(),
+])
 
-# image_dataset = ImageFolder(root=get_imgdataset_dir(config), transform=transform)
-# result = []
-# for label in tqdm(new_ytrain):
-#     loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
-#     for image, lbl in loader:
-#         if lbl == label:
-#             result.append(image.squeeze(dim=0))
-#             break
-# Path(str(Path(path_db) / "imgtrain")).mkdir(parents=True, exist_ok=True)
-# img = np.array(result)
-# np.save(path_imgnpy_train, img)
+image_dataset = ImageFolder(root=get_imgdataset_dir(config), transform=transform)
+result = []
+for label in tqdm(new_ytest):
+    loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
+    for image, lbl in loader:
+        if lbl == label:
+            image = image.squeeze(dim=0)
+            if (image.shape[0] == 1 and image.shape[1] == 28 and image.shape[2] == 28):
+                result.append(image.squeeze(dim=0).numpy())
+                break
+Path(str(Path(path_db) / "imgtest")).mkdir(parents=True, exist_ok=True)
+img = np.array(result)
+np.save(path_imgnpy_test, img)
 
-
-# image_dataset = ImageFolder(root=get_imgdataset_dir(config), transform=transform)
-# result = []
-# for label in tqdm(new_ytest):
-#     loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
-#     for image, lbl in loader:
-#         if lbl == label:
-#             result.append(image.squeeze(dim=0))
-#             break
-# Path(str(Path(path_db) / "imgtest")).mkdir(parents=True, exist_ok=True)
-# img = np.array(result)
-# np.save(path_imgnpy_test, img)
+image_dataset = ImageFolder(root=get_imgdataset_dir(config), transform=transform)
+result = []
+for label in tqdm(new_ytrain):
+    loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
+    for image, lbl in loader:
+        if lbl == label:
+            image = image.squeeze(dim=0)
+            if (image.shape[0] == 1 and image.shape[1] == 28 and image.shape[2] == 28):
+                result.append(image.squeeze(dim=0).numpy())
+                break
+Path(str(Path(path_db) / "imgtrain")).mkdir(parents=True, exist_ok=True)
+img = np.array(result)
+np.save(path_imgnpy_train, img)

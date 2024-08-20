@@ -2,6 +2,7 @@ import torchvision
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+
 class EEGDataset(Dataset):
     def __init__(self, eeg_path, labels_path, transform_eeg=None):
         self.eegs = np.load(eeg_path)
