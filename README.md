@@ -44,9 +44,9 @@
 ```
 EEGformer/
 ├── 📘docs/
-├── 🛢️database/
-├── 📁dataset/
-├── 📁imgdataset/
+├── 🛢️dataset/
+├── 🛢️imgdataset/
+├── 📁database/
 ├── 📁util/
 │   ├── 📃config.py
 │   └── 📃generate_MI_database.py
