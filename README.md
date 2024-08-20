@@ -12,6 +12,7 @@
     <a href="https://discord.gg/refine">Discord</a> |
     <a href="https://refine.dev/blog/">Blog</a>
 </div>
+
 </div>
 
 <br/>
