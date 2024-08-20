@@ -62,14 +62,14 @@ EEGformer/
 ```
 
 
-## ⚡ PREPARATION
+## PREPARATION
 
-### DATASET PREPARATION
+### Dataset Preparation
 
 - Download the **EEG DATASET** first. Check <a href="./dataset/README.MD">README DATASET</a>. All of the dataset is in .mat files
 - Download the **IMAGE DATASET**. This dataset already provided by this repository in imgdataset
 
-### PROCESSING DATASET & GENERATE PROCESSED DATASET
+### Processing Dataset & Generate Processed Dataset
 - Check the <a href="./util/config.py">Configuration File</a>
 - Update the configuration. You can update the checked list value/field
     <div align="center">
@@ -85,7 +85,7 @@ EEGformer/
     - labeleeg_test.npy
 
 
-## 😀 LET'S GET STARTED
+## LET'S GET STARTED
 
 ### 1. Configuration
 
@@ -196,6 +196,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_
 
 ## Results
 
+...
 
 ## License
 
