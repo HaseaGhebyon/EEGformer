@@ -29,6 +29,8 @@ database/
 └── <<generated_dataset_weights_N>>
 ```
 
+
+<br>
 Anda dapat melakukan generasi dataset yang telah diolah dengan melakukan running file <a href="./util/generate_MI_dataset.py">./util/generate_MI_dataset.py</a> pada folder <a href="./util">./util</a>
 
 ```sh
@@ -36,5 +38,7 @@ cd ./util
 python3 generate_MI_dataset.py
 ```
 
+
+<br>
 Catatan : 
 Untuk folder weight akan secara otomatis dibuatkan ketika Anda melakukan train pada dataset melalui file ```trainer_classification.py```
