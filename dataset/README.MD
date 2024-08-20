@@ -32,7 +32,14 @@ You can download from my Github Account. Which is compatible to my generate data
 
 *-- or --*
 
-You can run block code in file ```_Crawler_SCPMI_.ipynb```. But you need to rename the filename manually (which is about 75 file). So u can run database generation.
+You can run block code in file ```_Crawler_SCPMI_.ipynb```. But you need to rename the filename manually (which is about 75 file) according to the name on the original author link. So u can run database generation.
+
+<br>
+
+**NOTES :**
+
+Put all of the ```*.mat``` files in this folder (./dataset/)
+
 
 ## Referensi
 1. Kaya, M., Binli, M. K., Ozbay, E., Yanar, H., & Mishchenko, Y. (2018). A large electroencephalographic motor imagery dataset for electroencephalographic brain computer interfaces. Scientific Data, 5(1). https://doi.org/10.1038/sdata.2018.211
