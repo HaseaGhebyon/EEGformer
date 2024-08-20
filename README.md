@@ -51,6 +51,7 @@ EEGformer/
 │   ├── 📃config.py
 │   └── 📃generate_MI_database.py
 │
+├── 📃EEGImageDataset.py
 ├── 📃EEGDataset.py                   # deprecated
 ├── 📃model.py                        # EEGformer for classification
 ├── 📃model_vae.py                    # VAE for Image generation
