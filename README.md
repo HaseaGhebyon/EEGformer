@@ -52,7 +52,36 @@ Refine's headless architecture enables the building of highly customizable appli
 
 - Various platforms, including Next.js, Remix, React Native, Electron, etc., by a simple routing interface without the need for additional setup steps.
 
-## ⚡ Try Refine
+## ⚡ Pahami Struktur Direktori
+
+### Struktur Folder
+```
+EEGformer/
+│
+├── database/
+│
+├── dataset/
+│
+├── util/
+│   │
+│   ├── config.py
+│   │
+│   └── generate_MI_database.py
+│
+├── EEGDataset.py                   # deprecated
+│
+├── model.py                        # EEGformer for classification
+│
+├── model_vae.py                    # VAE for Image generation
+│
+├── trainer_classification.py       # Trainer for EEGformer classifications
+│
+├── trainer_vae.py                  # Trainer for VAE image generation
+│
+├── trainer_class_vae.py            # Trainer/Pipline for EEG Image Generation
+│
+└── train.py                        # deprecated
+```
 
 Start a new project with Refine in seconds using the following command:
 
