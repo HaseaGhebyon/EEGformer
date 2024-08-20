@@ -75,6 +75,14 @@ EEGformer/
         <img alt="configuration_for_prerocess" src="./docs/img/configuration_for_dataset.png">
     </div>
 - Now you can run file ```generate_MI_dataset.py```
+- Check the ```./database``` folder. There must be a new database folder named same with ```config["datasource"]```. And it contains 4 folders(1 files) + 2 files : 
+    - eegtrain / eeg_data.npy
+    - eegtest / eeg_data.npy
+    - imgtrain / imgeeg.npy
+    - imgtest / imgeeg.npy
+    - labeleeg_train.npy
+    - labeleeg_test.npy
+
 
 ## 😀 LET'S GET STARTED
 
@@ -87,7 +95,7 @@ def get_config():
     return {
         # MODEL & TRAINER CONFIGURATION
         "batch_size" : 32,
-        "num_epoch" : 500,
+        "num_epoch" : 500,      # deprecated
         "learning_rate" : 1e-04,
         "epsilon" : 1e-9,
         "num_cls" : 5,
@@ -116,7 +124,34 @@ def get_config():
     }
 ```
 
-...
+#### Description for every key
+
+| **Key**               | **Description**                                               |
+|-----------------------|---------------------------------------------------------------|
+| **batch_size**        | Number of batch size for training                             |
+| **num_epoch**         | *Deprecated!* Number of epochs                                |
+| **learning_rate**     | Learning rate for training optimizer                          |
+| **epsilon**           | Epsilon for training optimizer                                |
+| **num_cls**           | Number of class to classify                                   |
+| **transformer_size**  | Size of the transformer in EEGformer                          |
+| **root**              | Path of the project                                           |
+| **datasource**        | Datasource/Database that model working on (Folder in ./database)|
+| **model_folder**      | suffix for saved **Model folder**. For exported model             |
+| **model_basename**    | prefix for save **Model file** in **Model folder**                    |
+| **experiment_name**   | Experiment name, logging folder from Tensorboard              |
+| **preload**           | The EEGformer model that will loaded. Currently only provide latest|
+| **channel_order**     | Default Channel Order from SCPMI Dataset. *DO NOT CHANGE THIS!*|
+| **selected_channel**  | Selected Channel for model dan generated dataset(Order Sensitive)|
+| **seq_len**           | Sequence Length (Temporal length). Currently model only work with 120 data points|
+| **sliding_step**      | Number of step for sliding window                             |
+| **dataset_dir**       | Path of the EEG dataset. "/<root>/dataset"                    |
+| **low_cut**           | Bandpass filter low cut (default 0.57)                        |
+| **high_cut**          | Bandpass filter high cut (default 70)                         |
+| **samp_freq**         | Sampling frequency (200Hz by default). Type : Integer         |
+| **bandpass_order**    | Order for Bandpass filtering                                  |
+| **datasample_per_label** | *Deprecated!* Same with samp_freq                          |
+| **img_dataset_dir**   | Number of class to classify                                   |
+
 
 
 ### 2. EEGformer Training
@@ -156,6 +191,9 @@ For example :
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_class_vae.py 200 1
 ```
 
+
+
+## Results
 
 
 ## License
