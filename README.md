@@ -43,29 +43,20 @@
 ### Directory Structure
 ```
 EEGformer/
-│
-├── 📁database/
-│
+├── 📘docs/
+├── 🛢️database/
 ├── 📁dataset/
-│
+├── 📁imgdataset/
 ├── 📁util/
-│   │
 │   ├── 📃config.py
-│   │
 │   └── 📃generate_MI_database.py
 │
 ├── 📃EEGDataset.py                   # deprecated
-│
 ├── 📃model.py                        # EEGformer for classification
-│
 ├── 📃model_vae.py                    # VAE for Image generation
-│
 ├── 📃trainer_classification.py       # Trainer for EEGformer classifications
-│
 ├── 📃trainer_vae.py                  # Trainer for VAE image generation
-│
 ├── 📃trainer_class_vae.py            # Trainer/Pipline for EEG Image Generation
-│
 └── 📃train.py                        # deprecated
 ```
 
@@ -74,11 +65,16 @@ EEGformer/
 
 ### DATASET PREPARATION
 
-...
+- Download the **EEG DATASET** first. Check <a href="./dataset/README.MD">README DATASET</a>. All of the dataset is in .mat files
+- Download the **IMAGE DATASET**. This dataset already provided by this repository in imgdataset
 
 ### PROCESSING DATASET & GENERATE PROCESSED DATASET
-
-...
+- Check the <a href="./util/config.py">Configuration File</a>
+- Update the configuration. You can update the checked list value/field
+    <div align="center">
+        <img alt="configuration_for_prerocess" src="./docs/img/configuration_for_dataset.png">
+    </div>
+- Now you can run file ```generate_MI_dataset.py```
 
 ## 😀 LET'S GET STARTED
 
