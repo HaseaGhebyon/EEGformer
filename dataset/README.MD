@@ -25,7 +25,7 @@ You can download directly from the author link:
 
 *-- or --*
 
-You can download from my Github Account. Which is compatible to my generate database file. Download thorugh this link: 
+You can download from my GDRIVE Account. Which is compatible to my generate database file. Download thorugh this link: 
 <a href="https://drive.google.com/file/d/1k_1ERuNKfsC1XMSmBfU2VtVgNx--_KxY/view?usp=sharing">
     Author GDrive SCP_MI Download Link
 </a>
