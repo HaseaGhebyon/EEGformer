@@ -1,4 +1,8 @@
+database/*/
 
+!database/*.*
+
+dataset/*.mat
 
 __pycache__/
 
