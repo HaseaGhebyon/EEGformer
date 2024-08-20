@@ -26,10 +26,13 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/refine_dev?style=social)](https://twitter.com/refine_dev)
 
 </div>
+<br/>
+<div align="center">
+    <h2>Proposed Framework</h2>
+    <img alt="Proposed Framework" src="./docs/img/ARCHITECTURE.jpg">
+</div>
 
 <br/>
-
-
 
 ## What is Electroencephalogram?
 
@@ -122,15 +125,40 @@ def get_config():
 
 ### 2. EEGformer Training
 
-...
+
+Command to run training
+```
+CUDA_VISIBLE_DEVICES=<list_of_gpu_id> torchrun --standalone --nproc_per_node=gpu trainer_classification.py <number_of_epochs> <save_state_every>
+```
+
+For example :
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_classification.py 200 1
+```
 
 ### 3. VAE Training
 
-...
+Command to run training
+```
+CUDA_VISIBLE_DEVICES=<list_of_gpu_id> torchrun --standalone --nproc_per_node=gpu trainer_vae.py <number_of_epochs> <save_state_every>
+```
+
+For example :
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_vae.py 200 1
+```
 
 ### 4. Training/Pipeline of Image Generation using EEG
 
-...
+Command to run training
+```
+CUDA_VISIBLE_DEVICES=<list_of_gpu_id> torchrun --standalone --nproc_per_node=gpu trainer_class_vae.py <number_of_epochs> <save_state_every>
+```
+
+For example :
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_class_vae.py 200 1
+```
 
 
 
