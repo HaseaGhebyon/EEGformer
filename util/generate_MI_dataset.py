@@ -269,7 +269,6 @@ Path(str(Path(path_db) / "imgtest")).mkdir(parents=True, exist_ok=True)
 img = np.array(result)
 np.save(path_imgnpy_test, img)
 
-image_dataset = ImageFolder(root=get_imgdataset_dir(config), transform=transform)
 result = []
 for label in tqdm(new_ytrain):
     loader = DataLoader(image_dataset, batch_size=1, shuffle=True)

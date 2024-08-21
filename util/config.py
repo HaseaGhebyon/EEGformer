@@ -11,7 +11,7 @@ def get_config():
         "transformer_size" : 1,
 
         "root" : "/raid/data/m13520079/EEGformer",
-        "datasource" : "21chan_5st_120dp_20step",
+        "datasource" : "./database/21chan_5st_120dp_20step",
         "model_folder" : "weights",
         "model_basename" : "eegformer_model",
         "experiment_name": "runs/eegformermodel",
@@ -45,7 +45,7 @@ def latest_weights_file_path(config):
         return None
 
     latest_file = ""
-    latest_epoch = 0
+    latest_epoch = -1
     for file in weights_files:
         splitted = str(file).split("_")
         if (int(splitted[-1]) > latest_epoch):
@@ -53,32 +53,35 @@ def latest_weights_file_path(config):
             latest_file = file
     return str(latest_file)
 
+def get_root_database(config):
+    return str(Path(config["root"]) )
+
+def get_database_path(config):
+    return str(Path(config["root"]) / config["datasource"])
+
 def get_logging_folder(config):
     return str(Path(get_database_path(config)) / config["experiment_name"])
 
-def get_root_database(config):
-    return str(Path(config["root"]) / "database")
-
-def get_database_path(config):
-    return str(Path(config["root"]) / "database"/ config["datasource"])
-
-def get_eegnpy_train_file(config):
-    return str(Path(config["root"]) / "database" / config["datasource"] / "eegtrain" / "eeg_data.npy")
-
-def get_eegnpy_test_file(config):
-    return str(Path(config["root"]) / "database" / config["datasource"] / "eegtest" / "eeg_data.npy")
-
-def get_imgnpy_train_file(config):
-    return str(Path(config["root"]) / "database" /config["datasource"] / "imgtrain" / "imgeeg.npy")
-
-def get_imgnpy_test_file(config):
-    return str(Path(config["root"]) / "database" /config["datasource"] / "imgtest" / "imgeeg.npy")
-
-def get_labelnpy_train_file(config):
-    return str(Path(config["root"]) / "database" / config["datasource"] / "labeleeg_train.npy")
-
-def get_labelnpy_test_file(config):
-    return str(Path(config["root"]) / "database" / config["datasource"] / "labeleeg_test.npy")
-
 def get_imgdataset_dir(config):
     return str(Path(config["root"]) / "dataset_img" )
+
+
+# PATH TO PREPROCESEED DATASET
+def get_eegnpy_train_file(config):
+    return str(Path(config["root"])  / config["datasource"] / "eegtrain" / "eeg_data.npy")
+
+def get_eegnpy_test_file(config):
+    return str(Path(config["root"])  / config["datasource"] / "eegtest" / "eeg_data.npy")
+
+def get_imgnpy_train_file(config):
+    return str(Path(config["root"])  /config["datasource"] / "imgtrain" / "imgeeg.npy")
+
+def get_imgnpy_test_file(config):
+    return str(Path(config["root"])  /config["datasource"] / "imgtest" / "imgeeg.npy")
+
+def get_labelnpy_train_file(config):
+    return str(Path(config["root"])  / config["datasource"] / "labeleeg_train.npy")
+
+def get_labelnpy_test_file(config):
+    return str(Path(config["root"])  / config["datasource"] / "labeleeg_test.npy")
+

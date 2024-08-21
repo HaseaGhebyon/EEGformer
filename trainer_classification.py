@@ -37,6 +37,9 @@ class Trainer:
         save_every: int,
     ) -> None:
         self.gpu_id = int(os.environ["LOCAL_RANK"])
+        if (self.gpu_id == 0):
+            print("\nConfigure training process...")
+        
         self.model = model.to(self.gpu_id)
         self.train_data = train_data
         self.test_data = test_data
@@ -44,18 +47,21 @@ class Trainer:
         self.save_every = save_every
         self.epochs_run = 0
         self.global_step = 0
-
+        
         self.writer = SummaryWriter(get_logging_folder(config))
         self.preload = config["preload"]
 
 
         self.model_filename = latest_weights_file_path(config) if self.preload == 'latest' else get_weights_file_path(config, self.preload) if self.preload else None
+
         if self.model_filename:
-            print(f'Preloading model {self.model_filename}')
+            if (self.gpu_id == 0):
+                print(f'Preloading model {self.model_filename}\n')
             self._load_snapshot(self.model_filename)
         else:
             if (self.gpu_id == 0):
                 print("No model to preload, starting from scratch")
+                Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
         self.model = DDP(self.model, device_ids=[self.gpu_id])
 
 
@@ -64,7 +70,7 @@ class Trainer:
         loc = f"cuda:{self.gpu_id}"
         snapshot = torch.load(model_filename, map_location=loc)
         self.model.load_state_dict(snapshot["MODEL_STATE"])
-        self.epochs_run = snapshot["EPOCHS_RUN"]
+        self.epochs_run = snapshot["EPOCHS_RUN"] + 1
         self.global_step = snapshot["GLOBAL_STEP"]
 
         
@@ -80,15 +86,15 @@ class Trainer:
 
 
     def train(self, max_epochs: int):
-
-        Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
         loss_fn = FocalLoss(gamma=0.7, weights=torch.FloatTensor([3.25, 2.22, 7.95, 7.49, 8.17]).to(self.gpu_id)).to(self.gpu_id)
 
         for epoch in range(self.epochs_run, max_epochs):
+            print(f"[GPU {self.gpu_id}] Training Epoch {epoch}\n")
+            
             self.train_data.sampler.set_epoch(epoch)
-            train_iterator = tqdm(self.train_data, desc=f"Processing Epoch {epoch:02d}", position=0, leave=True)
+            train_iterator = tqdm(self.train_data, desc=f"[GPU {self.gpu_id}] Processing Epoch {epoch:02d}", position=0, leave=True) if self.gpu_id == 0 else self.train_data
+            
             for source, targets in train_iterator:
-                # print(source.type())
                 if source.shape[0] != config['batch_size']:
                     continue
                 source = source.to(torch.float32).to(self.gpu_id)
@@ -96,13 +102,9 @@ class Trainer:
                 
                 self.optimizer.zero_grad()
                 source = source.squeeze()
-                # print("1:", source.shape)
                 output1 = self.model.module.construct3D(source)
-                # print("2:", output1.shape)
                 output2 = self.model.module.encode(output1)
-                # print("3:",output2.shape)
                 output3 = self.model.module.decode(output2)
-                # print("4:", output3.shape)
                 loss = loss_fn(output3, targets)
 
                 if (self.gpu_id == 0):
@@ -114,13 +116,18 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
             
-            self._test()
+            print(f"\n[GPU {self.gpu_id}] Finised Training Epoch {epoch}")
+            print(f"[GPU {self.gpu_id}] Testing Epoch {epoch}")
+            
+            self.test()
+            
             if self.gpu_id == 0 and epoch % self.save_every == 0:
                 self._save_snapshot(epoch)
             
-    def _test(self):
+    def test(self):
         self.model.eval()
-        test_iterator = tqdm(self.test_data)
+        test_iterator = tqdm(self.test_data, desc=f"[GPU {self.gpu_id}] Processing Test", position=0, leave=True) if self.gpu_id == 0 else self.test_data
+
         with torch.no_grad():
             evoutputs = torch.zeros(len(test_iterator))
             evlabel = torch.zeros(len(test_iterator))
@@ -136,6 +143,9 @@ class Trainer:
                 evoutputs[idx] = torch.argmax(output_decoder.detach().cpu(), dim=-1)
                 idx += 1
             
+            confMat = ConfusionMatrix(task='multiclass', num_classes=config["num_cls"])
+            conf = confMat(evoutputs, evlabel)
+            
             metricAcc = Accuracy(task='multiclass', num_classes=config["num_cls"])
             acc = metricAcc(evoutputs, evlabel)
             
@@ -145,53 +155,9 @@ class Trainer:
             metricRec = Recall(task='multiclass', num_classes=config["num_cls"])
             rec = metricRec(evoutputs, evlabel)
 
-            confMat = ConfusionMatrix(task='multiclass', num_classes=config["num_cls"])
-            conf = confMat(evoutputs, evlabel)
             print(
-                f"[GPU{self.gpu_id}] Acc: {acc} \t Precision: {prec} \t Recall: {rec}"
+                f"[GPU {self.gpu_id}] Finished Test | Acc: {acc} \t Precision: {prec} \t Recall: {rec}"
             )
-            print(
-                f"Confusion Matrix : \n{conf}"
-            )
-
-    def calculate_dcsm(self, actuals, predictions):
-        actuals = actuals.cpu().detach().numpy()
-        predictions = predictions.cpu().detach().numpy()
-        actual_predict = np.zeros((5,5), dtype=int)
-        for act, pred in zip(actuals, predictions):
-            actual_predict[int(act), int(pred)] += 1
-        tp_all = 0
-        for i in range(5):
-            tp_all += actual_predict[i, i]
-        accuracy = tp_all/len(actuals)
-
-        # [] : TP, FN, FP, TN for every class
-        conf_mat = np.zeros((5,4), dtype=int)
-        for cls in range(5):
-            conf_mat[cls, 0] = actual_predict[cls, cls]
-            for i in range(1,5,1):
-                conf_mat[cls, 1] += actual_predict[cls, i]
-            for i in range(5):
-                if (i != cls):
-                    conf_mat[cls, 2] += actual_predict[i, cls]
-            for i in range(5):
-                for j in range(5):
-                    if (i != cls and j != cls):
-                        conf_mat[cls, 3] += actual_predict[i, j]
-        
-        precision = 0
-        recall = 0
-        for i in range(5):
-            temp_prec = conf_mat[i, 0]/(conf_mat[i, 0] + conf_mat[i, 2])
-            precision += temp_prec
-            temp_rec = conf_mat[i, 0]/(conf_mat[i, 0] + conf_mat[i, 1])
-            recall += temp_rec
-        precision = precision/5
-        recall = recall/5
-
-        if (self.gpu_id == 0):
-            print(f"\nAcc : {accuracy} \t Prec : {precision} \t Recall : {recall}")
-            return accuracy, precision, recall
 
 def load_train_objs():
     transform = torchvision.transforms.Compose([
@@ -242,7 +208,7 @@ def main(save_every: int, total_epochs: int, batch_size: int):
     train_dataset, test_dataset, model, optimizer = load_train_objs()
     train_data = prepare_dataloader(train_dataset, batch_size)
     test_data = prepare_dataloader(test_dataset, 1)
-    print("\nConfigure training process...")
+    
     trainer = Trainer(model, train_data, test_data, optimizer, save_every)
     trainer.train(total_epochs)
  
