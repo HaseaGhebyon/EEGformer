@@ -29,7 +29,7 @@ config = get_config()
 local_config = {
     "vae_model_folder" : "./database_vae/vae_weights",
     "vae_model_basename" : "vaemodel",
-    "experiment_name" : "runs/vaemodel",
+    "experiment_name" : "./database_vae/runs/vaemodel",
     "result_folder" : "./database_vae/results"
 }
 
