@@ -30,6 +30,65 @@ from model import build_eegformer
 from model_vae import VAE
 
 config = get_config()
+local_config_vae = {
+    "vae_model_folder" : "./database_vae/vae_weights",
+    "vae_model_basename" : "vaemodel",
+    "experiment_name" : "./database_vae/runs/vaemodel",
+    "result_folder" : "./database_vae/results",
+    "preload" : "latest" # or number that represent the epoch
+}
+local_config_gen = {
+    "proj_model_folder" : "./database_proj/21chan_5st_120dp_20step/proj_weights",
+    "proj_model_basename" : "projmodel",
+    "experiment_name" : "./database_proj/21chan_5st_120dp_20step/runs/projmodel",
+    "result_folder" : "./database_proj/21chan_5st_120dp_20step/results",
+    "preload" : "latest" # or number that represent the epoch
+}
+
+def latest_weights_vae_file_path():
+    model_folder = f"{local_config_vae['vae_model_folder']}"
+    model_filename = f"{local_config_vae['vae_model_basename']}*"
+
+    weights_files = list(Path(model_folder).glob(model_filename))
+    if len(weights_files) == 0:
+        return None
+
+    latest_file = ""
+    latest_epoch = -1
+    for file in weights_files:
+        splitted = str(file).split("_")
+        if (int(splitted[-1]) > latest_epoch):
+            latest_epoch = int(splitted[-1])
+            latest_file = file
+    return str(latest_file)
+
+def get_weights_vae_file_path(epoch: str):
+    model_folder = f"{local_config_vae['vae_model_folder']}"
+    model_filename = f"{local_config_vae['vae_model_basename']}_{epoch}"
+    return str(Path('.') / model_folder / model_filename)
+
+def latest_weights_proj_file_path():
+    model_folder = f"{local_config_gen['proj_model_folder']}"
+    model_filename = f"{local_config_gen['proj_model_basename']}*"
+
+    weights_files = list(Path(model_folder).glob(model_filename))
+    if len(weights_files) == 0:
+        return None
+
+    latest_file = ""
+    latest_epoch = -1
+    for file in weights_files:
+        splitted = str(file).split("_")
+        if (int(splitted[-1]) > latest_epoch):
+            latest_epoch = int(splitted[-1])
+            latest_file = file
+    return str(latest_file)
+
+def get_weights_proj_file_path(epoch: str):
+    model_folder = f"{local_config_gen['proj_model_folder']}"
+    model_filename = f"{local_config_gen['proj_model_basename']}_{epoch}"
+    return str(Path('.') / model_folder / model_filename)
+
 
 class ProjectionLayer(nn.Module):
     def __init__(self):
@@ -58,7 +117,7 @@ class Trainer:
         model_projection: torch.nn.Module,
         model_eeg: torch.nn.Module,
         model_vae: torch.nn.Module,
-        data: DataLoader,
+        train_data: DataLoader,
         test_data: DataLoader,
         optimizer: torch.optim.Optimizer,
         save_every: int,
@@ -68,39 +127,43 @@ class Trainer:
         self.model_eeg = model_eeg.to(self.gpu_id)
         self.model_vae = model_vae.to(self.gpu_id)
         
-        self.data = data
+        self.train_data = train_data
         self.test_data = test_data
         self.optimizer = optimizer
         self.save_every = save_every
         self.epochs_run = 0
         self.global_step = 0
 
-        self.writer = SummaryWriter(get_logging_folder(config))
-        self.preload = config["preload"]
+        self.writer = SummaryWriter(local_config_gen["experiment_name"])
+        self.preload_eegformer = config["preload"]
+        self.preload_vae = local_config_vae["preload"]
+        self.preload_gen = local_config_gen["preload"]
 
-        # LOAD PRETRAINED CLASSIFICATION EEG
-        self.model_filename = latest_weights_file_path(config) if self.preload == 'latest' else get_weights_file_path(config, self.preload) if self.preload else None
+        # LOAD PRETRAINED CLASSIFICATION EEG - still using global configuration
+        self.model_filename = latest_weights_file_path(config) if self.preload_eegformer == 'latest' else get_weights_file_path(config, self.preload_eegformer) if self.preload_eegformer else None
+        assert self.model_filename, "Please Insert the pretrained EEGformer"
         if self.model_filename:
             print(f'Preloading model {self.model_filename}')
             self._load_snapshot_classification(self.model_filename)
-        else:
-            print("Please Insert the pretrained EEGformer")
         
         # LOAD PRETRAINED VAE
-        self.model_vae_filename = "./VAE_weights/vae_190"
+        self.model_vae_filename = latest_weights_vae_file_path() if self.preload_vae == 'latest' else get_weights_vae_file_path(self.preload_vae) if self.preload_vae else None
+        assert self.model_vae_filename, "Please Insert the pretrained VAE"
         if self.model_vae_filename:
             self._load_snapshot_vae(self.model_vae_filename)
-        else:
-            print("Please Insert the pretrained VAE")
 
+        
         # LOAD PROJECTION SNAPSHOT
-        self.model_projection_filename = None
-        if self.model_projection_filename:
-            self._load_snapshot_proj(self.model_projection_filename)
+        Path(f"{local_config_gen['proj_model_folder']}").mkdir(parents=True, exist_ok=True)
+        Path(f"{local_config_gen['experiment_name']}").mkdir(parents=True, exist_ok=True)
+        Path(f"{local_config_gen['result_folder']}").mkdir(parents=True, exist_ok=True)
+        
+        self.model_proj_filename = latest_weights_proj_file_path() if self.preload_gen == 'latest' else get_weights_proj_file_path(self.preload_gen) if self.preload_gen else None
+        if self.model_proj_filename:
+            self._load_snapshot_proj(self.model_proj_filename)
         else:
             if (self.gpu_id == 0):
                 print("No model to preload, starting from scratch")
-
         self.model_projection = DDP(self.model_projection, device_ids=[self.gpu_id])
         
 
@@ -118,14 +181,14 @@ class Trainer:
         loc = f"cuda:{self.gpu_id}"
         snapshot = torch.load(model_filename, map_location=loc)
         self.model_projection.load_state_dict(snapshot["MODEL_STATE"])
-        self.epochs_run = snapshot["EPOCHS_RUN"]
+        self.epochs_run = snapshot["EPOCHS_RUN"] + 1
         self.global_step = snapshot["GLOBAL_STEP"]
         
 
     def _save_snapshot(self, epoch):
-        model_filename = get_weights_file_path(config, f"{epoch:02d}")
+        model_filename = get_weights_proj_file_path(f"{epoch:02d}")
         snapshot = {
-            "MODEL_STATE": self.model_proj.module.state_dict(),
+            "MODEL_STATE": self.model_projection.module.state_dict(),
             "EPOCHS_RUN": epoch,
             "GLOBAL_STEP" : 0
         }
@@ -147,17 +210,16 @@ class Trainer:
         plt.imshow(source_image_grid.permute(1, 2, 0).squeeze())
         plt.title("Original")
 
-        plt.savefig(f'./Result_generated/epoch_{epoch}.png', bbox_inches='tight')
+        plt.savefig(f'{local_config_gen["result_folder"]}/epoch_{epoch}.png', bbox_inches='tight')
 
     def train(self, max_epochs: int):
-
-        Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
         loss_fn = nn.MSELoss()
 
         for epoch in range(self.epochs_run, max_epochs):
-            self.data.sampler.set_epoch(epoch)
-            # saved=False
-            train_iterator = tqdm(self.data, desc=f"Processing Epoch {epoch:02d}", position=0, leave=True)
+            print(f"[GPU {self.gpu_id}] Training Epoch {epoch}\n")
+            
+            self.train_data.sampler.set_epoch(epoch)
+            train_iterator = tqdm(self.train_data, desc=f"[GPU {self.gpu_id}] Processing Epoch {epoch:02d}", position=0, leave=True) if self.gpu_id == 0 else self.train_data
             for source_eeg, source_img, targets in train_iterator:
                 self.optimizer.zero_grad()
                 
@@ -172,28 +234,23 @@ class Trainer:
                 source_eeg = source_eeg.squeeze()
                 output1 = self.model_eeg.construct3D(source_eeg)
                 output2 = self.model_eeg.encode(output1)
-
-                latent_space = self.model_vae.encode(source_img)
-                
                 output3 = self.model_projection(output2)
-                
+
+                latent_space, encoding = self.model_vae.encode(source_img)
                 loss = loss_fn(output3, latent_space)
+                
 
                 if (self.gpu_id == 0):
                     train_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
                 
-                # self.writer.add_scalar(f'GPU[{self.gpu_id}] TRAIN LOSS', loss.item(), self.global_step)
-                # self.writer.flush()
+                self.writer.add_scalar(f'GPU[{self.gpu_id}] TRAIN LOSS', loss.item(), self.global_step)
+                self.writer.flush()
                 
                 loss.backward()
                 self.optimizer.step()
-
-                # if not saved:
-                #     if self.gpu_id == 0 and epoch % self.save_every == 0:
-                #         recon_images = self.model_vae.decode(output3)
-                #         self._save_image(epoch, recon_images, source_img)
-                #         saved = True
             
+            # Run Test for Every Epoch
+            saved =False # Save image every epoch
             for source_eeg, source_img, targets in self.test_data:
                 with torch.no_grad():
                     if source_eeg.shape[0] != config['batch_size']:
@@ -206,17 +263,16 @@ class Trainer:
                     source_eeg = source_eeg.squeeze()
                     output1 = self.model_eeg.construct3D(source_eeg)
                     output2 = self.model_eeg.encode(output1)
+                    output3 = self.model_projection(output2)
 
                     latent_space = self.model_vae.encode(source_img)
-                
-                    output3 = self.model_projection(output2)
 
                     if self.gpu_id == 0 and epoch % self.save_every == 0:
                         recon_images = self.model_vae.decode(output3)
                         self._save_image(epoch, recon_images, source_img)
                         break
-            # if self.gpu_id == 0 and epoch % self.save_every == 0:
-            #     self._save_snapshot(epoch)
+            if self.gpu_id == 0 and epoch % self.save_every == 0:
+                self._save_snapshot(epoch)
 
 def load_train_objs():
     transform_eeg = torchvision.transforms.Compose([
