@@ -68,14 +68,14 @@ class VAE(nn.Module):
         q_mean, q_stddev = self.encoder(images)
         q_dist = Normal(q_mean, q_stddev)
         z_sample = q_dist.rsample()
-        return z_sample
+        return z_sample, q_dist
 
     def decode(self, z_sample):
         decoding = self.decoder(z_sample)
         return decoding
 
     def forward(self, images):
-        z_sample = self.encode(images)
+        z_sample, q_dist = self.encode(images)
         decoding = self.decode(z_sample)
-        return decoding, 
+        return decoding, q_dist
     
