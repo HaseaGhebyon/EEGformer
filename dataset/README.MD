@@ -14,9 +14,14 @@ The dataset used for this study is
 
 <br>
 
+## Quick Start
+
+If you only want the quick start of the model. Rather than you download all of the dataset, I provide the preproceed database here : ... . Check <a href="../database/README.MD">README DATABASE</a> for full explanation
+
+Note : Put it in ```./database``` folder
+
+
 ## Download Link
-
-
 
 You can download directly from the author link:
 <a href="https://figshare.com/collections/A_large_electroencephalographic_motor_imagery_dataset_for_electroencephalographic_brain_computer_interfaces/3917698">
