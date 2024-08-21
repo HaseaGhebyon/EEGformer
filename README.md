@@ -30,6 +30,8 @@
 <div align="center">
     <h2>Proposed Framework</h2>
     <img alt="Proposed Framework" src="./docs/img/ARCHITECTURE.jpg">
+    <h3>Image Generation (Pipeline)</h3>
+    <img alt="Image Generation (Pipeline)" src="./docs/img/PIPELINE_GEN_IMAGE.jpg">
 </div>
 
 <br/>
@@ -46,7 +48,14 @@ EEGformer/
 ├── 📘docs/
 ├── 🛢️dataset/
 ├── 🛢️imgdataset/
+│
 ├── 📁database/
+│   ├── 📁 database1/
+│   ├── 📁 database1_weight/
+│   ...
+│   ├── 📁 databaseN/
+│   └── 📁 databaseN_weight/
+│
 ├── 📁util/
 │   ├── 📃config.py
 │   └── 📃generate_MI_database.py
