@@ -75,8 +75,9 @@ EEGformer/
 
 ### Dataset Preparation
 
-- Download the **EEG DATASET** first. Check <a href="./dataset/README.MD">README DATASET</a>. All of the dataset is in .mat files
 - Download the **IMAGE DATASET**. This dataset already provided by this repository in imgdataset
+- Download the **EEG DATASET** first. Check <a href="./dataset/README.MD">README DATASET</a>. All of the dataset is in .mat files<br>
+Or u can check the <a href="./database/README.MD">README DATABASE</a> to download the preprocessed data. (No need to Generate Processed Dataset. You can skip the next step)
 
 ### Processing Dataset & Generate Processed Dataset
 - Check the <a href="./util/config.py">Configuration File</a>
@@ -84,7 +85,7 @@ EEGformer/
     <div align="center">
         <img alt="configuration_for_prerocess" src="./docs/img/configuration_for_dataset.png">
     </div>
-- Now you can run file ```generate_MI_dataset.py```
+- Now you can run file ```generate_MI_dataset.py```. <br>*Be aware I'm not consider the efficiency of memory when run this file. But it works in My University server.*
 - Check the ```./database``` folder. There must be a new database folder named same with ```config["datasource"]```. And it contains 4 folders(1 files) + 2 files : 
     - eegtrain / eeg_data.npy
     - eegtest / eeg_data.npy
@@ -100,6 +101,7 @@ EEGformer/
 
 Here is the configuration file (found at <a href="./util/config.py">./util/config.py</a>). It is used for the entire code, so please check it carefully when you want to run the training.
 
+**GLOBAL CONFIGURATION**
 ```python
 def get_config():
     return {
@@ -134,7 +136,33 @@ def get_config():
     }
 ```
 
-#### Description for every key
+**Image Generation Configuration (trainer_class_vae.py)**
+```python
+local_config_vae = {
+    "vae_model_folder" : "./database_vae/vae_weights",
+    "vae_model_basename" : "vaemodel",
+    "experiment_name" : "./database_vae/runs/vaemodel",
+    "result_folder" : "./database_vae/results",
+    "preload" : "latest" # or number that represent the epoch
+}
+local_config_gen = {
+    "proj_model_folder" : "./database_proj/21chan_5st_120dp_20step/proj_weights",
+    "proj_model_basename" : "projmodel",
+    "experiment_name" : "./database_proj/21chan_5st_120dp_20step/runs/projmodel",
+    "result_folder" : "./database_proj/21chan_5st_120dp_20step/results",
+    "preload" : "latest" # or number that represent the epoch
+}
+```
+**VAE Configuration (trainer_vae.py)**
+```python
+local_config = {
+    "vae_model_folder" : "./database_vae/vae_weights",
+    "vae_model_basename" : "vaemodel",
+    "experiment_name" : "./database_vae/runs/vaemodel",
+    "result_folder" : "./database_vae/results"
+}
+```
+**Description for every key in GLOBAL CONFIGURATION**
 
 | **Key**               | **Description**                                               |
 |-----------------------|---------------------------------------------------------------|
