@@ -10,20 +10,21 @@ def get_config():
         "num_cls" : 5,
         "transformer_size" : 1,
 
-        "root" : "/raid/data/m13520079/EEGformer",
-        "datasource" : "./database/21chan_5st_120dp_20step",
+        "root" : "/raid/data/m13520079/new_env/EEGformer",
+        "datasource" : "./database/SUBJECTB_21chan_5st_120dp_5step",
         "model_folder" : "weights",
         "model_basename" : "eegformer_model",
         "experiment_name": "runs/eegformermodel",
         "preload" : "latest",
 
         "channel_order" : ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],        
-        "selected_channel" : ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],
+        "selected_channel" :  ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],
         "seq_len" :120,
-        "sliding_step": 20,
+        "sliding_step": 5,
 
         # DATASET CONFIGURATION
-        "dataset_dir" : "/raid/data/m13520079/EEGformer/dataset",
+        "dataset_dir" : "/raid/data/m13520079/new_env/EEGformer/dataset",
+        "target_subject" : "GENERAL",
         "low_cut" : 0.57, #Hz
         "high_cut" : 70.0,
         "samp_freq" : 200.0,
@@ -63,7 +64,7 @@ def get_logging_folder(config):
     return str(Path(get_database_path(config)) / config["experiment_name"])
 
 def get_imgdataset_dir(config):
-    return str(Path(config["root"]) / "dataset_img" )
+    return str(Path(config["root"]) / config["img_dataset_dir"] )
 
 
 # PATH TO PREPROCESEED DATASET

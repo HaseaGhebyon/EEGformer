@@ -9,12 +9,9 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics.classification import Accuracy, Precision, Recall, ConfusionMatrix
 
-import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
-
-from focal_loss.focal_loss import FocalLoss
 
 from EEGDataset import EEGDataset
 from util.config import get_config, get_eegnpy_train_file, get_labelnpy_train_file, get_eegnpy_test_file, get_labelnpy_test_file, get_logging_folder, latest_weights_file_path, get_weights_file_path
@@ -31,27 +28,19 @@ class Trainer:
     def __init__(
         self,
         model: torch.nn.Module,
-        train_data: DataLoader,
-        test_data: DataLoader,
-        optimizer: torch.optim.Optimizer,
-        save_every: int,
+        test_data: DataLoader
     ) -> None:
         self.gpu_id = int(os.environ["LOCAL_RANK"])
         if (self.gpu_id == 0):
             print("\nConfigure training process...")
         
         self.model = model.to(self.gpu_id)
-        self.train_data = train_data
         self.test_data = test_data
-        self.optimizer = optimizer
-        self.save_every = save_every
         self.epochs_run = 0
         self.global_step = 0
         
         self.writer = SummaryWriter(get_logging_folder(config))
         self.preload = config["preload"]
-
-
         self.model_filename = latest_weights_file_path(config) if self.preload == 'latest' else get_weights_file_path(config, self.preload) if self.preload else None
 
         if self.model_filename:
@@ -64,66 +53,12 @@ class Trainer:
                 Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
         self.model = DDP(self.model, device_ids=[self.gpu_id])
 
-
-
     def _load_snapshot(self, model_filename):
         loc = f"cuda:{self.gpu_id}"
         snapshot = torch.load(model_filename, map_location=loc)
         self.model.load_state_dict(snapshot["MODEL_STATE"])
         self.epochs_run = snapshot["EPOCHS_RUN"] + 1
         self.global_step = snapshot["GLOBAL_STEP"]
-
-        
-    def _save_snapshot(self, epoch):
-        model_filename = get_weights_file_path(config, f"{epoch:02d}")
-        snapshot = {
-            "MODEL_STATE": self.model.module.state_dict(),
-            "EPOCHS_RUN": epoch,
-            "GLOBAL_STEP" : 0
-        }
-        torch.save(snapshot, model_filename)
-        print(f"Epoch {epoch} | Training snapshot saved at {model_filename}")
-
-
-    def train(self, max_epochs: int):
-        loss_fn = FocalLoss(gamma=0.5, weights=torch.FloatTensor([2.1, 2.1, 8.5, 8.5, 8.7]).to(self.gpu_id)).to(self.gpu_id)
-
-        for epoch in range(self.epochs_run, max_epochs):
-            print(f"[GPU {self.gpu_id}] Training Epoch {epoch}\n")
-            
-            self.train_data.sampler.set_epoch(epoch)
-            train_iterator = tqdm(self.train_data, desc=f"[GPU {self.gpu_id}] Processing Epoch {epoch:02d}", position=0, leave=True) if self.gpu_id == 0 else self.train_data
-            
-            for source, targets in train_iterator:
-                if source.shape[0] != config['batch_size']:
-                    continue
-                source = source.to(torch.float32).to(self.gpu_id)
-                targets = targets.to(self.gpu_id)
-                
-                self.optimizer.zero_grad()
-                source = source.squeeze()
-                output1 = self.model.module.construct3D(source)
-                output2 = self.model.module.encode(output1)
-                output3 = self.model.module.decode(output2)
-                loss = loss_fn(output3, targets)
-
-                if (self.gpu_id == 0):
-                    train_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
-                
-                self.writer.add_scalar(f'GPU[{self.gpu_id}] TRAIN LOSS', loss.item(), self.global_step)
-                self.writer.flush()
-                
-                loss.backward()
-                self.optimizer.step()
-            
-            print(f"\n[GPU {self.gpu_id}] Finised Training Epoch {epoch}")
-            print(f"[GPU {self.gpu_id}] Testing Epoch {epoch}")
-
-            if epoch % 10 == 0: # Only test every 10 epoch
-            	self.test()
-            
-            if self.gpu_id == 0 and epoch % self.save_every == 0:
-                self._save_snapshot(epoch)
             
     def test(self):
         self.model.eval()
@@ -156,24 +91,39 @@ class Trainer:
             metricRec = Recall(task='multiclass', num_classes=config["num_cls"])
             rec = metricRec(evoutputs, evlabel)
 
+            TP = torch.diag(conf)
+            FP = torch.sum(conf, dim=0) - TP
+            FN = torch.sum(conf, dim=1) - TP
+            accuracy = torch.sum(TP) / torch.sum(conf)
+            recall = TP / (TP + FN)
+            precision = TP / (TP + FP)
+            f1score = 2 * (precision * recall) / (precision + recall)
+            average_accuracy = accuracy.mean()
+            average_recall = recall.mean()
+            average_precision = precision.mean()
+            average_f1score = f1score.mean()
+            print("Recall per class:")
+            print(recall)
+            print("Precision per class:")
+            print(precision)
+            print("F1-score per class:")
+            print(f1score)
             print(
-                f"[GPU {self.gpu_id}] Finished Test | Acc: {acc} \t Precision: {prec} \t Recall: {rec}"
+                f"[GPU {self.gpu_id}] Average | Acc: {average_accuracy} \t Precision: {average_precision} \t Recall: {average_recall} \t F1-Score {average_f1score}"
             )
 
+            print(conf)
 def load_train_objs():
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor()
     ])
-    train_dataset = EEGDataset(
-        eeg_path=get_eegnpy_train_file(config), 
-        labels_path=get_labelnpy_train_file(config), 
-        transform_eeg=transform
-    )
+
     test_dataset = EEGDataset(
         eeg_path=get_eegnpy_test_file(config), 
         labels_path=get_labelnpy_test_file(config), 
         transform_eeg=transform
     )
+
     model = build_eegformer(
         channel_size=len(config["selected_channel"]),
         seq_len=config["seq_len"],
@@ -189,10 +139,7 @@ def load_train_objs():
         num_cls=5,
         scaler_ffn=4
     )
-    
-    optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'], eps=1e-9)
-    
-    return train_dataset, test_dataset, model, optimizer
+    return test_dataset, model
 
 def prepare_dataloader(dataset: Dataset, batch_size: int):
     return DataLoader(
@@ -203,28 +150,18 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
         sampler=DistributedSampler(dataset)
     )
 
-def main(save_every: int, total_epochs: int, batch_size: int):
+def main():
     ddp_setup()
     
-    train_dataset, test_dataset, model, optimizer = load_train_objs()
-    train_data = prepare_dataloader(train_dataset, batch_size)
+    test_dataset, model = load_train_objs()
     test_data = prepare_dataloader(test_dataset, 1)
     
-    trainer = Trainer(model, train_data, test_data, optimizer, save_every)
-    trainer.train(total_epochs)
+    trainer = Trainer(model, test_data)
+    trainer.test()
  
     destroy_process_group()
 
 if __name__ == "__main__":
     import argparse
-    assert torch.cuda.is_available(), "Training on CPU is not supported"
-    parser = argparse.ArgumentParser(description='Distributed training job')
-    parser.add_argument('total_epochs', type=int, help='Total epochs to train the model')
-    parser.add_argument('save_every', type=int, help='How often to save a snapshot')
-    parser.add_argument('--batch_size', default=32, type=int, help='Input batch size on each device (default: 32)')
-    args = parser.parse_args()
-    main(
-        args.save_every, 
-        args.total_epochs,
-        args.batch_size
-    )
+    assert torch.cuda.is_available(), "Testing on CPU is not supported"
+    main()

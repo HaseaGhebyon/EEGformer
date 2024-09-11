@@ -356,6 +356,12 @@ class EEGformer(nn.Module):
 
     def decode(self, encoder_output: torch.Tensor):
         return self.decoder(encoder_output)
+    
+    def forward(self, x):
+        x = self.onedcnn(x)
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
 
 def build_eegformer(
         channel_size: int,

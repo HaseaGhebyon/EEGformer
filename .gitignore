@@ -2,6 +2,13 @@ database/*/
 
 !database/*.*
 
+database_gen/
+
+database_proj/
+
+database_vae/
+
+
 dataset/*.mat
 
 __pycache__/
