@@ -51,17 +51,32 @@ EEGformer/
 │
 ├── 📁database/
 │   ├── 📁 database1/
-│   ├── 📁 database1_weight/
+│   ├── 📁 database1_weights/
 │   ...
 │   ├── 📁 databaseN/
-│   └── 📁 databaseN_weight/
+│   └── 📁 databaseN_weights/
+│
+├── 📁database_vae/
+│   ├── 📁 results/
+│   ├── 📁 runs/
+│   └── 📁 vae_weights/
+│
+├── 📁database/
+│   ├── 📁 database1/
+│   ├── 📁 database1_weights/
+│   ...
+│   ├── 📁 databaseN/
+│   └── 📁 databaseN_weights/
 │
 ├── 📁util/
 │   ├── 📃config.py
 │   └── 📃generate_MI_database.py
 │
-├── 📃EEGImageDataset.py
 ├── 📃EEGDataset.py                   # deprecated
+├── 📃EEGImageDataset.py
+├── 📃inference.ipynb
+├── 📃inference_classification.py
+├── 📃inference_vae.py
 ├── 📃model.py                        # EEGformer for classification
 ├── 📃model_vae.py                    # VAE for Image generation
 ├── 📃trainer_classification.py       # Trainer for EEGformer classifications
@@ -183,12 +198,13 @@ local_config = {
 | **seq_len**           | Sequence Length (Temporal length). Currently model only work with 120 data points|
 | **sliding_step**      | Number of step for sliding window                             |
 | **dataset_dir**       | Path of the EEG dataset. "/_root_/dataset"                    |
+| **target_subject**       | Subject Target to generate database for training model                    |
 | **low_cut**           | Bandpass filter low cut (default 0.57)                        |
 | **high_cut**          | Bandpass filter high cut (default 70)                         |
 | **samp_freq**         | Sampling frequency (200Hz by default)         |
 | **bandpass_order**    | Order for Bandpass. Type : Integer filtering                                  |
 | **datasample_per_label** | *Deprecated!* Same with samp_freq                          |
-| **img_dataset_dir**   | Number of class to classify                                   |
+| **img_dataset_dir**   | Path to image dataset. Using Folder Dataset format                                   |
 
 
 
@@ -217,7 +233,7 @@ For example :
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_vae.py 200 1
 ```
 
-### 4. Training/Pipeline of Image Generation using EEG
+### 4. Training/Pipeline of Image Generation using EEG (*DEPRECEATED)
 
 Command to run training
 ```
@@ -229,11 +245,17 @@ For example :
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_class_vae.py 200 1
 ```
 
+### 4. Training Image Generation using EEG (EEGformer Gen)
 
+Command to run training
+```
+CUDA_VISIBLE_DEVICES=<list_of_gpu_id> torchrun --standalone --nproc_per_node=gpu trainer_eegformer_gen.py <number_of_epochs> <save_state_every>
+```
 
-## Results
-
-...
+For example :
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=gpu trainer_eegformer_gen.py 200 1
+```
 
 ## License
 
