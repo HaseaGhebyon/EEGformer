@@ -86,7 +86,7 @@ class Trainer:
 
 
     def train(self, max_epochs: int):
-        loss_fn = FocalLoss(gamma=0.5, weights=torch.FloatTensor([2.1, 2.1, 8.5, 8.5, 8.7]).to(self.gpu_id)).to(self.gpu_id)
+        loss_fn = FocalLoss(gamma=0.5, weights=torch.FloatTensor([2.2, 2, 4.2, 4.1, 4.4]).to(self.gpu_id)).to(self.gpu_id)
 
         for epoch in range(self.epochs_run, max_epochs):
             print(f"[GPU {self.gpu_id}] Training Epoch {epoch}\n")
@@ -118,13 +118,11 @@ class Trainer:
             
             print(f"\n[GPU {self.gpu_id}] Finised Training Epoch {epoch}")
             print(f"[GPU {self.gpu_id}] Testing Epoch {epoch}")
-
-            if epoch % 10 == 0: # Only test every 10 epoch
-            	self.test()
-            
+            # if epoch % 10 == 0:
+            #     self.test()
             if self.gpu_id == 0 and epoch % self.save_every == 0:
                 self._save_snapshot(epoch)
-            
+
     def test(self):
         self.model.eval()
         test_iterator = tqdm(self.test_data, desc=f"[GPU {self.gpu_id}] Processing Test", position=0, leave=True) if self.gpu_id == 0 else self.test_data

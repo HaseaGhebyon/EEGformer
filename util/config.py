@@ -11,7 +11,7 @@ def get_config():
         "transformer_size" : 1,
 
         "root" : "/raid/data/m13520079/new_env/EEGformer",
-        "datasource" : "./database/SUBJECTB_21chan_5st_120dp_5step",
+        "datasource" : "./database/21chan_5st_120dp_1step",
         "model_folder" : "weights",
         "model_basename" : "eegformer_model",
         "experiment_name": "runs/eegformermodel",
@@ -20,7 +20,7 @@ def get_config():
         "channel_order" : ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],        
         "selected_channel" :  ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'A1', 'A2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Fz', 'Cz', 'Pz'],
         "seq_len" :120,
-        "sliding_step": 5,
+        "sliding_step": 1,
 
         # DATASET CONFIGURATION
         "dataset_dir" : "/raid/data/m13520079/new_env/EEGformer/dataset",
