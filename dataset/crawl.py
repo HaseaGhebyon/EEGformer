@@ -2,6 +2,7 @@ import pprint
 import requests
 from bs4 import BeautifulSoup
 
+DOWNLOADED_FILES = 10
 
 from os.path import basename
 import os
@@ -43,7 +44,7 @@ j = 0
 # URL of the file to be downloaded
 for url, base_url in zip(download_urls, urls):
     # Send a GET request to the URL
-    if (j < 10):
+    if (j < DOWNLOADED_FILES):
         continue
     print(url)
     response = requests.get(url, allow_redirects=True)
