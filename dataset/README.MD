@@ -30,14 +30,7 @@ You can download directly from the author link:
 
 *-- or --*
 
-You can download from my GDRIVE Account. Which is compatible to my generate database file. Download thorugh this link: 
-<a href="https://drive.google.com/file/d/1k_1ERuNKfsC1XMSmBfU2VtVgNx--_KxY/view?usp=sharing">
-    Author GDrive SCP_MI Download Link
-</a>
-
-*-- or --*
-
-You can run block code in file ```_Crawler_SCPMI_.ipynb```. But you need to rename the filename manually (which is about 75 file) according to the name on the original author link. So u can run database generation.
+THE MOST SIMPLE THING YOU CAN DO. You can run block code in file ```crawl.py```. 
 
 <br>
 
