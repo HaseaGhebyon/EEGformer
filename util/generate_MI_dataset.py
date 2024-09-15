@@ -185,105 +185,118 @@ print("Train Data size : ", len(ytrain))
 print("Test Data size : ", len(ytest))
 
 
-# new_Xtrain = []
-# new_ytrain = []
-# for sample, label in tqdm(zip(Xtrain, ytrain), desc=f"Sliding across temporal train data", position=0, leave=True):
-#     temp_chan = []
-#     for channel in sample:
-#         all_patches = np.lib.stride_tricks.sliding_window_view(channel, window_shape=(config["seq_len"],))
-#         stride_indices = np.arange(0, all_patches.shape[0], config["sliding_step"])
-#         temp_chan.append(all_patches[stride_indices])
-#     for i in range(len(stride_indices)):
-#         new_ytrain.append(label)
-#     temp_chan = np.array(temp_chan)
-#     new_Xtrain += np.transpose(temp_chan, [1,0,2]).tolist()
-# Xtrain = []
-# ytrain = []
-
-# new_Xtest = []
-# new_ytest = []
-# for sample, label in tqdm(zip(Xtest, ytest), desc=f"Sliding across temporal test data", position=0, leave=True):
-#     temp_chan = []
-#     for channel in sample:
-#         all_patches = np.lib.stride_tricks.sliding_window_view(channel, window_shape=(config["seq_len"],))
-#         stride_indices = np.arange(0, all_patches.shape[0], config["sliding_step"])
-#         temp_chan.append(all_patches[stride_indices])
-#     for i in range(len(stride_indices)):
-#         new_ytest.append(label)
-#     temp_chan = np.array(temp_chan)
-#     new_Xtest += np.transpose(temp_chan, [1,0,2]).tolist()
-# Xtest = []
-# ytest = []
+root_db = get_root_database(config)
+path_db = get_database_path(config)
+path_eegnpy_train = get_eegnpy_train_file(config)
+path_eegnpy_test = get_eegnpy_test_file(config)
+path_labelnpy_train = get_labelnpy_train_file(config)
+path_labelnpy_test = get_labelnpy_test_file(config)
 
 
-# print("Composition Data After Sliding Window ")
-# print("Train Data size : ", len(new_ytrain))
-# print("Test Data size : ", len(new_ytest))
+Path(root_db).mkdir(parents=True, exist_ok=True)
+Path(path_db).mkdir(parents=True, exist_ok=True)
+
+Path(str(Path(path_db) / "eegtrain")).mkdir(parents=True, exist_ok=True)
+Path(str(Path(path_db) / "eegtest")).mkdir(parents=True, exist_ok=True)
 
 
 
-# root_db = get_root_database(config)
-# path_db = get_database_path(config)
-# path_eegnpy_train = get_eegnpy_train_file(config)
-# path_eegnpy_test = get_eegnpy_test_file(config)
-# path_labelnpy_train = get_labelnpy_train_file(config)
-# path_labelnpy_test = get_labelnpy_test_file(config)
 
 
-# Path(root_db).mkdir(parents=True, exist_ok=True)
-# Path(path_db).mkdir(parents=True, exist_ok=True)
+new_Xtrain = []
+new_ytrain = []
+for sample, label in tqdm(zip(Xtrain, ytrain), desc=f"Sliding across temporal train data", position=0, leave=True):
+    temp_chan = []
+    for channel in sample:
+        all_patches = np.lib.stride_tricks.sliding_window_view(channel, window_shape=(config["seq_len"],))
+        stride_indices = np.arange(0, all_patches.shape[0], config["sliding_step"])
+        temp_chan.append(all_patches[stride_indices])
+    for i in range(len(stride_indices)):
+        new_ytrain.append(label)
+    temp_chan = np.array(temp_chan)
+    new_Xtrain += np.transpose(temp_chan, [1,0,2]).tolist()
+del Xtrain
+del ytrain
 
-# Path(str(Path(path_db) / "eegtrain")).mkdir(parents=True, exist_ok=True)
-# Path(str(Path(path_db) / "eegtest")).mkdir(parents=True, exist_ok=True)
+new_Xtrain = np.array(new_Xtrain)
+np.save(path_eegnpy_train, new_Xtrain)
+del new_Xtrain
+
+new_ytrain = np.array(new_ytrain)
+np.save(path_labelnpy_train, new_ytrain)
+print("Composition Data After Sliding Window ")
+print("Train Data size : ", len(new_ytrain))
+del new_ytrain
+
+new_Xtest = []
+new_ytest = []
+for sample, label in tqdm(zip(Xtest, ytest), desc=f"Sliding across temporal test data", position=0, leave=True):
+    temp_chan = []
+    for channel in sample:
+        all_patches = np.lib.stride_tricks.sliding_window_view(channel, window_shape=(config["seq_len"],))
+        stride_indices = np.arange(0, all_patches.shape[0], config["sliding_step"])
+        temp_chan.append(all_patches[stride_indices])
+    for i in range(len(stride_indices)):
+        new_ytest.append(label)
+    temp_chan = np.array(temp_chan)
+    new_Xtest += np.transpose(temp_chan, [1,0,2]).tolist()
+del Xtest
+del ytest
+
+new_Xtest = np.array(new_Xtest)
+np.save(path_eegnpy_test, new_Xtest)
+del new_Xtest
+
+new_ytest = np.array(new_ytest)
+np.save(path_labelnpy_test, new_ytest)
+print("Composition Data After Sliding Window ")
+print("Test Data size : ", len(new_ytest))
+del new_ytest
 
 
-# new_Xtrain = np.array(new_Xtrain)
-# np.save(path_eegnpy_train, new_Xtrain)
-
-# new_Xtest = np.array(new_Xtest)
-# np.save(path_eegnpy_test, new_Xtest)
 
 
-# new_ytrain = np.array(new_ytrain)
-# np.save(path_labelnpy_train, new_ytrain)
-
-# new_ytest = np.array(new_ytest)
-# np.save(path_labelnpy_test, new_ytest)
+path_imgnpy_train = get_imgnpy_train_file(config)
+path_imgnpy_test = get_imgnpy_test_file(config)
 
 
-# path_imgnpy_train = get_imgnpy_train_file(config)
-# path_imgnpy_test = get_imgnpy_test_file(config)
+# LOAD PAIRED IMAGE DATA (RANDOM ASSIGNMENTS)
+transform = torchvision.transforms.Compose([
+        torchvision.transforms.Grayscale(num_output_channels=1),
+        torchvision.transforms.ToTensor(),
+])
+image_dataset = ImageFolder(root=get_imgdataset_dir(config), transform=transform)
 
+new_ytest = np.load(path_labelnpy_test)
+result = []
+for label in tqdm(new_ytest):
+    loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
+    for image, lbl in loader:
+        if lbl == label:
+            image = image.squeeze(dim=0)
+            if (image.shape[0] == 1 and image.shape[1] == 28 and image.shape[2] == 28):
+                result.append(image.squeeze(dim=0).numpy())
+                break
+Path(str(Path(path_db) / "imgtest")).mkdir(parents=True, exist_ok=True)
+img = np.array(result)
+np.save(path_imgnpy_test, img)
+del new_ytest
+del img
+del result
 
-# # LOAD PAIRED IMAGE DATA (RANDOM ASSIGNMENTS)
-# transform = torchvision.transforms.Compose([
-#         torchvision.transforms.Grayscale(num_output_channels=1),
-#         torchvision.transforms.ToTensor(),
-# ])
-
-# image_dataset = ImageFolder(root=get_imgdataset_dir(config), transform=transform)
-# result = []
-# for label in tqdm(new_ytest):
-#     loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
-#     for image, lbl in loader:
-#         if lbl == label:
-#             image = image.squeeze(dim=0)
-#             if (image.shape[0] == 1 and image.shape[1] == 28 and image.shape[2] == 28):
-#                 result.append(image.squeeze(dim=0).numpy())
-#                 break
-# Path(str(Path(path_db) / "imgtest")).mkdir(parents=True, exist_ok=True)
-# img = np.array(result)
-# np.save(path_imgnpy_test, img)
-
-# result = []
-# for label in tqdm(new_ytrain):
-#     loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
-#     for image, lbl in loader:
-#         if lbl == label:
-#             image = image.squeeze(dim=0)
-#             if (image.shape[0] == 1 and image.shape[1] == 28 and image.shape[2] == 28):
-#                 result.append(image.squeeze(dim=0).numpy())
-#                 break
-# Path(str(Path(path_db) / "imgtrain")).mkdir(parents=True, exist_ok=True)
-# img = np.array(result)
-# np.save(path_imgnpy_train, img)
+new_ytrain = np.load(path_labelnpy_train)
+result = []
+for label in tqdm(new_ytrain):
+    loader = DataLoader(image_dataset, batch_size=1, shuffle=True)
+    for image, lbl in loader:
+        if lbl == label:
+            image = image.squeeze(dim=0)
+            if (image.shape[0] == 1 and image.shape[1] == 28 and image.shape[2] == 28):
+                result.append(image.squeeze(dim=0).numpy())
+                break
+Path(str(Path(path_db) / "imgtrain")).mkdir(parents=True, exist_ok=True)
+img = np.array(result)
+np.save(path_imgnpy_train, img)
+del new_ytrain
+del img
+del result
