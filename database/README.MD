@@ -37,6 +37,6 @@ database/
 
 ## Quick Start
 
-If you only want the quick start of the model. Rather than you download all of the dataset and generate, I provide the preproceed database here : ... 
+If you only want the quick start of the model. Rather than you download all of the dataset and generate, I provide the preproceed database here : https://drive.google.com/drive/folders/10GQeaDWX6iigAteXShhtQd2zhr_AhohD?usp=sharing
 
 
